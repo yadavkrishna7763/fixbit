@@ -1,16 +1,66 @@
-# 🔧 FixBit — Mobile Repair Marketplace
+# 🔧 FixBit — Local Repair Marketplace
 
-A full-stack web application that connects users needing phone repairs with nearby repair shops.
+🚀 **FixBit** is a full-stack web application that connects users with nearby repair shops for **phones, tablets, and laptops**.
 
-Users can:
+Users can post repair requests, receive competitive quotes from nearby shops, and choose the best deal — all in one platform.
 
-* Submit repair requests with location & radius
-* Receive quotes from nearby shops
-* Compare and accept the best deal
-* Chat with shops in real-time
-* Rate & review services
+---
 
-Includes **Admin Panel**, **Email Notifications**, and **Secure Authentication**.
+## 🌐 Live Demo
+
+* 🔗 Frontend: https://your-frontend-url.netlify.app
+* 🔗 Backend API: https://your-backend-url.onrender.com
+
+> ⚠️ Replace the above links after deployment
+
+---
+
+## ✨ Features
+
+### 👤 User Features
+
+* 📍 Location-based repair request system
+* 📱 Select device type & issue
+* 📸 Upload images for better diagnosis
+* 💰 Receive multiple price quotes
+* ✅ Accept best offer
+* 💬 Real-time chat with repair shop
+* ⭐ Rate & review shops
+* 🗺 Explore nearby shops on map
+
+---
+
+### 🏪 Shop Features
+
+* 📝 Register shop with location
+* 📊 Dashboard to manage incoming requests
+* 💵 Send & update price quotes
+* 📦 Update repair status
+* 💬 Chat with customers
+* 🖼 Upload shop gallery
+
+---
+
+### 🛠 Admin Panel
+
+* 👥 Manage users
+* 🚫 Ban / Unban accounts
+* 📦 Monitor all repair requests
+* 🔐 Role-based secure access
+
+---
+
+## 🏗 Tech Stack
+
+| Layer    | Technology                          |
+| -------- | ----------------------------------- |
+| Frontend | HTML, CSS, JavaScript, Tailwind CSS |
+| Backend  | Node.js, Express.js                 |
+| Database | MySQL                               |
+| Auth     | JWT, bcrypt                         |
+| Storage  | Cloudinary                          |
+| Maps     | Leaflet.js                          |
+| Hosting  | Netlify, Render                     |
 
 ---
 
@@ -21,8 +71,6 @@ fixbit/
 ├── frontend/
 │   ├── index.html
 │   ├── login.html
-│   ├── user-register.html
-│   ├── shop-register.html
 │   ├── user-dashboard.html
 │   ├── shop-dashboard.html
 │   ├── admin.html
@@ -31,47 +79,42 @@ fixbit/
 │
 ├── backend/
 │   ├── src/
-│   │   ├── server.js
-│   │   ├── db.js
-│   │   ├── middleware/
-│   │   │   └── auth.js
-│   │   ├── routes/
-│   │   │   ├── auth.js
-│   │   │   ├── requests.js
-│   │   │   ├── responses.js
-│   │   │   ├── shops.js
-│   │   │   ├── reviews.js
-│   │   │   ├── messages.js
-│   │   │   └── admin.js
-│   │   ├── utils/
-│   │   │   └── email.js
-│   │   └── uploads/
-│   ├── .env
-│   ├── package.json
-│   └── package-lock.json
+│   ├── routes/
+│   ├── middleware/
+│   └── utils/
 │
 ├── database/
-│   └── schema.sql
+│   ├── schema.sql
+│   └── sample_shops.sql
+│
 └── README.md
 ```
 
 ---
 
-## 🚀 Quick Start (Local Setup)
+## ⚙️ Installation & Setup
 
-### 1️⃣ Database Setup
+### 1️⃣ Clone Repository
 
-```bash
-mysql -u root -p < database/schema.sql
 ```
-
-✔ Creates database `fixbit` with all required tables
+git clone https://github.com/your-username/fixbit.git
+cd fixbit
+```
 
 ---
 
-### 2️⃣ Backend Setup
+### 2️⃣ Database Setup
 
-```bash
+```
+mysql -u root -p < database/schema.sql
+mysql -u root -p fixbit < database/sample_shops.sql
+```
+
+---
+
+### 3️⃣ Backend Setup
+
+```
 cd backend
 npm install
 ```
@@ -84,178 +127,92 @@ DB_HOST=localhost
 DB_USER=root
 DB_PASSWORD=your_password
 DB_NAME=fixbit
-JWT_SECRET=your_secret_key
+JWT_SECRET=your_secret
 
-EMAIL_USER=your_email@gmail.com
-EMAIL_PASS=your_app_password
+CLOUDINARY_CLOUD_NAME=your_cloud
+CLOUDINARY_API_KEY=your_key
+CLOUDINARY_API_SECRET=your_secret
 ```
 
-Start server:
+Run backend:
 
-```bash
+```
 npm run dev
 ```
 
-✅ Expected output:
+---
+
+### 4️⃣ Frontend Setup
 
 ```
-Server running on port 5050
-MySQL Connected...
+cd frontend
+npx serve
 ```
 
----
-
-### 3️⃣ Frontend Setup
-
-Run using Live Server OR open:
-
-```
-frontend/index.html
-```
-
-Update API base if needed:
-
-```js
-const API_BASE = 'http://localhost:5050/api';
-```
+OR open `index.html` directly in browser
 
 ---
 
-### 🔐 Admin Access
+## 🔐 Authentication
 
-* Register with: `admin@fixbit.com`
-* Login → auto-redirect to admin panel
+* JWT-based authentication
+* Role-based system:
 
-(You can edit admin emails in backend + frontend)
-
----
-
-## ✅ Features
-
-### 🔑 Authentication
-
-* JWT-based login
-* Role-based (User / Shop / Admin)
-* Secure password hashing (bcrypt)
+  * User
+  * Shop
+  * Admin
 
 ---
 
-### 👤 User Features
+## 📡 API Overview
 
-* Submit repair requests (image + location)
-* View requests & responses
-* Compare quotes
-* Accept best deal
-* Chat with shop
-* Review & rate shops
-
----
-
-### 🏪 Shop Features
-
-* Register with map location
-* View nearby requests
-* Send/update quotes
-* Manage jobs
-* Chat with users
+| Method | Endpoint           | Description           |
+| ------ | ------------------ | --------------------- |
+| POST   | /api/auth/register | Register user/shop    |
+| POST   | /api/auth/login    | Login                 |
+| POST   | /api/requests      | Create repair request |
+| GET    | /api/requests/my   | Get user requests     |
+| POST   | /api/responses     | Send quote            |
+| POST   | /api/messages      | Chat system           |
 
 ---
 
-### 🛠 Admin Panel
+## 🚀 Deployment
 
-* View all users & requests
-* Ban / Unban users
-* Delete requests
-
----
-
-### ⚙️ System Features
-
-* 📍 Distance calculation (Haversine)
-* 💬 Real-time chat
-* 📧 Email notifications
-* 🖼 Image upload (≤ 5MB)
-* 📱 Responsive UI (Tailwind)
-* 🚫 Rate limiting (100 req / 15 min)
+| Service  | Platform   |
+| -------- | ---------- |
+| Frontend | Netlify    |
+| Backend  | Render     |
+| Database | TiDB Cloud |
+| Storage  | Cloudinary |
 
 ---
 
-## 📡 API Endpoints
+## 📸 Screenshots
 
-| Method | Endpoint                  | Description     |
-| ------ | ------------------------- | --------------- |
-| POST   | /api/auth/register        | Register        |
-| POST   | /api/auth/login           | Login           |
-| POST   | /api/requests             | Create request  |
-| GET    | /api/requests/nearby      | Nearby requests |
-| GET    | /api/requests/my          | User requests   |
-| PUT    | /api/requests/:id/accept  | Accept quote    |
-| POST   | /api/responses            | Send quote      |
-| POST   | /api/messages             | Send message    |
-| GET    | /api/messages/request/:id | Chat messages   |
-| GET    | /api/admin/users          | Admin users     |
-| DELETE | /api/admin/requests/:id   | Delete request  |
-
----
-
-## 🛠 Tech Stack
-
-### Backend
-
-* Node.js + Express
-* MySQL (mysql2)
-* JWT Authentication
-* Bcrypt
-* Multer (uploads)
-* Nodemailer
-* Rate Limiting
-
-### Frontend
-
-* HTML, CSS, JS
-* Tailwind CSS
-* Leaflet.js (maps)
-
----
-
-## 🧪 Troubleshooting
-
-| Issue               | Fix                    |
-| ------------------- | ---------------------- |
-| Backend not running | `npm run dev`          |
-| API not working     | Check API_BASE         |
-| Admin not opening   | Re-login               |
-| Email not sending   | Use Gmail App Password |
-| Map not loading     | Check internet         |
-
----
-
-## 🚀 Deployment (Recommended)
-
-* Backend: Render / Railway / VPS
-* Database: PlanetScale / MySQL VPS
-* Frontend: Netlify / Vercel
+*Add your screenshots here (very important for GitHub visibility)*
 
 ---
 
 ## 🔮 Future Improvements
 
 * 🔔 Push notifications
-* 💳 Payment integration
-* 📊 Admin analytics
-* 📱 PWA support
+* 💳 Payment integration (Razorpay / Stripe)
+* 📊 Admin analytics dashboard
+* ⚡ Real-time chat (Socket.io)
+* 📱 Mobile application
 
 ---
 
-## 📝 License
+## 👨‍💻 Author
 
-Educational project — free to use and modify.
+**Krishna Yadav**
 
----
-
-## 🙌 Contributors
-
-* Krishna Yadav
-* Team Members
+* GitHub: https://github.com/your-username
+* LinkedIn: https://linkedin.com/in/your-profile
 
 ---
+
+## ⭐ Support
+
+If you like this project, please give it a ⭐ on GitHub!
