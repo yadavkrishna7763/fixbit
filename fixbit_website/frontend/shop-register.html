@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FixBit — Register Your Shop</title>
+  <link rel="stylesheet" href="style.css"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+
+<div class="auth-page" style="align-items:flex-start; padding-top:2rem;">
+  <div class="auth-card" style="max-width:520px;">
+
+    <div class="auth-logo">
+      <a href="index.html"><h1 class="font-outfit">🔧 FixBit</h1></a>
+      <p>Register your repair shop</p>
+    </div>
+
+    <form id="shopRegisterForm">
+      <div class="grid grid-cols-2 gap-3">
+        <div class="form-group">
+          <label class="form-label">Shop Name *</label>
+          <input class="form-input" id="name" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone *</label>
+          <input class="form-input" id="phone" type="tel" pattern="[0-9]{10}" required/>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Email (optional)</label>
+        <input class="form-input" id="email" type="email"/>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Password *</label>
+        <input class="form-input" id="password" type="password" minlength="6" required/>
+      </div>
+
+      <!-- Hidden location fields -->
+      <input type="hidden" id="latitude"/>
+      <input type="hidden" id="longitude"/>
+
+      <div class="form-group">
+        <label class="form-label">📍 Shop Location</label>
+        <div style="background:var(--slate-50); border-radius:12px; padding:1rem;">
+          <button type="button" id="liveLocBtn" class="btn btn-secondary btn-sm mb-3">📡 Use Live Location</button>
+          <div id="map" style="height:250px;"></div>
+          <div id="locationInfo" style="display:none; margin-top:.75rem;" class="text-teal-700 bg-teal-50 p-2 rounded">
+            ✅ Location selected
+          </div>
+        </div>
+      </div>
+
+      <div id="errorMsg" class="error-message" style="display:none;"></div>
+
+      <button type="submit" class="btn btn-primary btn-full btn-lg">Register Shop →</button>
+    </form>
+
+    <div class="auth-divider">already registered?</div>
+    <a href="login.html" class="btn btn-outline btn-full">Log In</a>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="script.js"></script>
+<script>
+  let map, marker;
+
+  function initMap(lat = 20.5937, lng = 78.9629) { // Default: India center
+    if (map) map.remove();
+    map = L.map('map').setView([lat, lng], 5);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap'
+    }).addTo(map);
+
+    marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+    marker.on('dragend', updateCoords);
+    map.on('click', (e) => {
+      marker.setLatLng(e.latlng);
+      updateCoords();
+    });
+    updateCoords();
+  }
+
+  function updateCoords() {
+    const pos = marker.getLatLng();
+    document.getElementById('latitude').value = pos.lat;
+    document.getElementById('longitude').value = pos.lng;
+    document.getElementById('locationInfo').style.display = 'block';
+  }
+
+  document.getElementById('liveLocBtn').addEventListener('click', async () => {
+    try {
+      const pos = await getCurrentPosition();
+      map.setView([pos.lat, pos.lng], 13);
+      marker.setLatLng([pos.lat, pos.lng]);
+      updateCoords();
+    } catch (e) {
+      showToast('Could not get live location', 'error');
+    }
+  });
+
+  window.addEventListener('load', () => initMap());
+
+  document.getElementById('shopRegisterForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('name').value;
+    const phone = document.getElementById('phone').value;
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const lat = document.getElementById('latitude').value;
+    const lng = document.getElementById('longitude').value;
+
+    if (!lat || !lng) {
+      showToast('Please select shop location on map', 'error');
+      return;
+    }
+    if (!/^\d{10}$/.test(phone)) {
+      showToast('Phone must be 10 digits', 'error');
+      return;
+    }
+
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.classList.add('btn-loading');
+    btn.disabled = true;
+
+    try {
+      await register({
+        name, phone, email: email || null, password,
+        role: 'shop',
+        latitude: lat,
+        longitude: lng
+      });
+    } catch (err) {
+      document.getElementById('errorMsg').style.display = 'block';
+      document.getElementById('errorMsg').innerText = err.message;
+    } finally {
+      btn.classList.remove('btn-loading');
+      btn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>

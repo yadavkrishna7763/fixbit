@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FixBit — Register as User</title>
+  <link rel="stylesheet" href="style.css"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+
+<div class="auth-page">
+  <div class="auth-card">
+
+    <div class="auth-logo">
+      <a href="index.html" style="text-decoration:none;">
+        <h1 class="font-outfit">🔧 FixBit</h1>
+      </a>
+      <p>Create a free user account</p>
+    </div>
+
+    <div style="height:4px; background:var(--slate-100); border-radius:99px; margin-bottom:1.5rem;">
+      <div id="progressBar" style="height:100%; width:25%; background:var(--teal-500); border-radius:99px; transition:.4s;"></div>
+    </div>
+
+    <form id="registerForm">
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <div class="input-icon-wrap">
+          <span class="icon">👤</span>
+          <input class="form-input" id="name" type="text" placeholder="Your full name" required/>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Phone Number <span style="color:#dc2626">*</span></label>
+        <div class="input-icon-wrap">
+          <span class="icon">📱</span>
+          <input class="form-input" id="phone" type="tel" placeholder="10-digit number" pattern="[0-9]{10}" required/>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Email <span style="color:var(--slate-300);">(optional)</span></label>
+        <div class="input-icon-wrap">
+          <span class="icon">📧</span>
+          <input class="form-input" id="email" type="email" placeholder="your@email.com"/>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Password <span style="color:#dc2626">*</span></label>
+        <div class="input-icon-wrap">
+          <span class="icon">🔒</span>
+          <input class="form-input" id="password" type="password" placeholder="Min 6 characters" minlength="6" required/>
+        </div>
+      </div>
+
+      <!-- Hidden location fields will be populated via JS -->
+      <input type="hidden" id="latitude"/>
+      <input type="hidden" id="longitude"/>
+
+      <div id="errorMsg" class="error-message" style="display:none;"></div>
+
+      <button type="submit" class="btn btn-primary btn-full btn-lg" id="regBtn">
+        Create Account →
+      </button>
+    </form>
+
+    <div class="auth-divider">already have an account?</div>
+    <a href="login.html" class="btn btn-outline btn-full">Log In</a>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<script src="script.js"></script>
+<script>
+  // Update progress bar
+  function updateProgress() {
+    const fields = ['name', 'phone', 'password'];
+    const filled = fields.filter(id => document.getElementById(id).value.trim()).length;
+    document.getElementById('progressBar').style.width = (filled / 3 * 100) + '%';
+  }
+  document.querySelectorAll('input').forEach(i => i.addEventListener('input', updateProgress));
+
+  // Get location on page load
+  window.addEventListener('load', async () => {
+    try {
+      const pos = await getCurrentPosition();
+      document.getElementById('latitude').value = pos.lat;
+      document.getElementById('longitude').value = pos.lng;
+    } catch (e) {
+      console.warn('Location not available');
+    }
+  });
+
+  document.getElementById('registerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('name').value;
+    const phone = document.getElementById('phone').value;
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const lat = document.getElementById('latitude').value;
+    const lng = document.getElementById('longitude').value;
+
+    if (!/^\d{10}$/.test(phone)) {
+      showToast('Phone must be 10 digits', 'error');
+      return;
+    }
+    if (password.length < 6) {
+      showToast('Password must be at least 6 characters', 'error');
+      return;
+    }
+
+    const btn = document.getElementById('regBtn');
+    btn.classList.add('btn-loading');
+    btn.disabled = true;
+
+    try {
+      await register({
+        name, phone, email: email || null, password,
+        role: 'user',
+        latitude: lat || null,
+        longitude: lng || null
+      });
+    } catch (err) {
+      document.getElementById('errorMsg').style.display = 'block';
+      document.getElementById('errorMsg').innerText = err.message;
+    } finally {
+      btn.classList.remove('btn-loading');
+      btn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>

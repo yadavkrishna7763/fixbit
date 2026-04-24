@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FixBit Admin</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900">
+  <div class="max-w-7xl mx-auto p-6">
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-3xl font-outfit font-bold text-slate-800 dark:text-white">🔧 FixBit Admin</h1>
+      <button onclick="logout()" class="btn btn-outline">🚪 Logout</button>
+    </div>
+
+    <div class="flex gap-4 mb-6">
+      <button id="btnUsers" class="btn btn-primary" onclick="showSection('users')">👥 Users</button>
+      <button id="btnRequests" class="btn btn-outline" onclick="showSection('requests')">📋 Requests</button>
+    </div>
+
+    <!-- Users Section -->
+    <div id="section-users">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold text-slate-800 dark:text-white">All Users</h2>
+        <button onclick="loadUsers()" class="btn btn-secondary btn-sm">🔄 Refresh</button>
+      </div>
+      <div id="usersTable" class="overflow-x-auto bg-white dark:bg-slate-800 rounded-lg shadow"></div>
+    </div>
+
+    <!-- Requests Section -->
+    <div id="section-requests" style="display:none;">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-bold text-slate-800 dark:text-white">All Repair Requests</h2>
+        <button onclick="loadAllRequests()" class="btn btn-secondary btn-sm">🔄 Refresh</button>
+      </div>
+      <div id="requestsTable" class="overflow-x-auto bg-white dark:bg-slate-800 rounded-lg shadow"></div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+  <script src="script.js"></script>
+  <script>
+    const user = checkAuth();
+    if (!user) window.location.href = 'login.html';
+    
+    const adminEmails = ['admin@fixbit.com', 'krishnayadav7763@gmail.com'];
+    if (!adminEmails.includes(user.email)) {
+      alert('Admin access only.');
+      window.location.href = 'index.html';
+    }
+
+    window.showSection = (section) => {
+      document.getElementById('section-users').style.display = section === 'users' ? 'block' : 'none';
+      document.getElementById('section-requests').style.display = section === 'requests' ? 'block' : 'none';
+      document.getElementById('btnUsers').className = section === 'users' ? 'btn btn-primary' : 'btn btn-outline';
+      document.getElementById('btnRequests').className = section === 'requests' ? 'btn btn-primary' : 'btn btn-outline';
+      if (section === 'users') loadUsers();
+      if (section === 'requests') loadAllRequests();
+    };
+
+    async function loadUsers() {
+      const container = document.getElementById('usersTable');
+      container.innerHTML = '<div class="p-4 text-center">Loading users...</div>';
+      try {
+        const data = await apiRequest('/admin/users');
+        if (!data.success) throw new Error(data.message);
+        
+        const html = `
+          <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+            <thead class="bg-slate-100 dark:bg-slate-700">
+              <tr>
+                <th class="p-3 text-left">ID</th>
+                <th class="p-3 text-left">Name</th>
+                <th class="p-3 text-left">Email</th>
+                <th class="p-3 text-left">Phone</th>
+                <th class="p-3 text-left">Role</th>
+                <th class="p-3 text-left">Rating</th>
+                <th class="p-3 text-left">Status</th>
+                <th class="p-3 text-left">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.users.map(u => `
+                <tr class="border-t dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                  <td class="p-3">${u.id}</td>
+                  <td class="p-3 font-medium">${u.name || '—'}</td>
+                  <td class="p-3 text-sm">${u.email || '—'}</td>
+                  <td class="p-3">${u.phone || '—'}</td>
+                  <td class="p-3">
+                    <span class="badge ${u.role === 'shop' ? 'badge-orange' : 'badge-teal'}">${u.role}</span>
+                  </td>
+                  <td class="p-3">${u.avg_rating ? '⭐ ' + parseFloat(u.avg_rating).toFixed(1) : '—'}</td>
+                  <td class="p-3">
+                    <span class="${u.banned ? 'text-red-600 font-semibold' : 'text-green-600'}">
+                      ${u.banned ? '🚫 Banned' : '✅ Active'}
+                    </span>
+                  </td>
+                  <td class="p-3">
+                    <button onclick="toggleBan(${u.id}, ${u.banned})" 
+                            class="btn btn-sm ${u.banned ? 'btn-primary' : 'btn-outline'}">
+                      ${u.banned ? 'Unban' : 'Ban'}
+                    </button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+        container.innerHTML = html;
+      } catch (err) {
+        container.innerHTML = `<div class="p-4 text-red-600">Error: ${err.message}</div>`;
+        showToast('Failed to load users', 'error');
+      }
+    }
+
+    async function loadAllRequests() {
+      const container = document.getElementById('requestsTable');
+      container.innerHTML = '<div class="p-4 text-center">Loading requests...</div>';
+      try {
+        const data = await apiRequest('/admin/requests');
+        if (!data.success) throw new Error(data.message);
+        
+        const html = `
+          <table class="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+            <thead class="bg-slate-100 dark:bg-slate-700">
+              <tr>
+                <th class="p-3 text-left">ID</th>
+                <th class="p-3 text-left">User</th>
+                <th class="p-3 text-left">Device</th>
+                <th class="p-3 text-left">Issue</th>
+                <th class="p-3 text-left">Status</th>
+                <th class="p-3 text-left">Shop</th>
+                <th class="p-3 text-left">Created</th>
+                <th class="p-3 text-left">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.requests.map(r => `
+                <tr class="border-t dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                  <td class="p-3">${r.id}</td>
+                  <td class="p-3">${r.user_name || '—'}</td>
+                  <td class="p-3">${r.device_type || 'Phone'} ${r.brand} ${r.model}</td>
+                  <td class="p-3">${r.issue_type}</td>
+                  <td class="p-3"><span class="badge badge-teal">${r.status}</span></td>
+                  <td class="p-3">${r.shop_name || '—'}</td>
+                  <td class="p-3">${new Date(r.created_at).toLocaleDateString()}</td>
+                  <td class="p-3">
+                    <button onclick="deleteRequest(${r.id})" class="btn btn-sm btn-outline text-red-600">Delete</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+        container.innerHTML = html;
+      } catch (err) {
+        container.innerHTML = `<div class="p-4 text-red-600">Error: ${err.message}</div>`;
+        showToast('Failed to load requests', 'error');
+      }
+    }
+
+    window.toggleBan = async (userId, currentlyBanned) => {
+      const action = currentlyBanned ? 'unban' : 'ban';
+      if (!confirm(`Are you sure you want to ${action} this user?`)) return;
+      try {
+        const res = await apiRequest(`/admin/users/${userId}/ban`, 'PUT', { banned: !currentlyBanned });
+        if (res.success) {
+          showToast(`User ${action}ned`, 'success');
+          loadUsers();
+        } else {
+          showToast(res.message || 'Action failed', 'error');
+        }
+      } catch (err) {
+        showToast('Failed to update user', 'error');
+      }
+    };
+
+    window.deleteRequest = async (id) => {
+      if (!confirm('Permanently delete this request?')) return;
+      try {
+        await apiRequest(`/admin/requests/${id}`, 'DELETE');
+        showToast('Request deleted', 'success');
+        loadAllRequests();
+      } catch (err) {
+        showToast('Delete failed', 'error');
+      }
+    };
+
+    // Start with users section
+    showSection('users');
+  </script>
+</body>
+</html>

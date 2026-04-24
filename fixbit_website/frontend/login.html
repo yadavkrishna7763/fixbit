@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>FixBit — Login</title>
+  <link rel="stylesheet" href="style.css"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+
+<div class="auth-page">
+  <!-- Decorative bg shapes -->
+  <div style="position:absolute;width:400px;height:400px;background:radial-gradient(circle,rgba(13,148,136,.12),transparent 70%);top:-100px;right:-100px;pointer-events:none;z-index:0;"></div>
+  <div style="position:absolute;width:300px;height:300px;background:radial-gradient(circle,rgba(249,115,22,.08),transparent 70%);bottom:-50px;left:-80px;pointer-events:none;z-index:0;"></div>
+
+  <div class="auth-card" style="max-width:420px; position:relative; z-index:1;">
+
+    <div class="auth-logo">
+      <a href="index.html" style="text-decoration:none; display:inline-flex; align-items:center; gap:.4rem; justify-content:center; margin-bottom:.3rem;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        <h1 class="font-outfit" style="font-size:1.9rem; color:var(--teal-700); letter-spacing:-.03em; -webkit-text-fill-color:initial;">FixBit</h1>
+      </a>
+      <p style="color:var(--slate-400); font-size:.88rem;">Log in to your account</p>
+    </div>
+
+    <form id="loginForm">
+      <div class="form-group">
+        <label class="form-label">Phone or Email</label>
+        <div class="input-icon-wrap">
+          <span class="icon">📧</span>
+          <input class="form-input" id="email" type="text" placeholder="Enter phone or email" required/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <div class="input-icon-wrap">
+          <span class="icon">🔒</span>
+          <input class="form-input" id="password" type="password" placeholder="Enter password" required/>
+        </div>
+      </div>
+      <div id="errorMsg" class="error-message" style="display:none;"></div>
+      <button type="submit" class="btn btn-primary btn-full btn-lg" id="loginBtn" style="margin-top:.25rem;">
+        Log In →
+      </button>
+    </form>
+
+    <div class="auth-divider">new to FixBit?</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:.6rem; margin-bottom:1.25rem;">
+      <a href="user-register.html" class="btn btn-secondary" style="justify-content:center; gap:.4rem;">
+        👤 I'm a User
+      </a>
+      <a href="shop-register.html" class="btn btn-secondary" style="justify-content:center; gap:.4rem;">
+        🏪 I'm a Shop
+      </a>
+    </div>
+
+    <p style="text-align:center; font-size:.78rem;">
+      <a href="index.html" style="color:var(--teal-600); text-decoration:none;">← Back to Home</a>
+    </p>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+<script src="script.js"></script>
+<script>
+  document.getElementById('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const btn = document.getElementById('loginBtn');
+    btn.classList.add('btn-loading'); btn.disabled = true;
+    try {
+      await login(email, password);
+    } catch (err) {
+      document.getElementById('errorMsg').style.display = 'block';
+      document.getElementById('errorMsg').innerText = err.message;
+    } finally {
+      btn.classList.remove('btn-loading'); btn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>

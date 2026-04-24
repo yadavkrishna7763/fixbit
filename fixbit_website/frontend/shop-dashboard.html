@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FixBit — Shop Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body>
+
+  <!-- ========== CHAT MODAL ========== -->
+  <div id="chatModal"
+    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1000; align-items:flex-end; justify-content:center; backdrop-filter:blur(6px);">
+    <div class="chat-modal-inner" style="animation:fadeUp .3s cubic-bezier(0.34,1.56,0.64,1);">
+      <div class="chat-header">
+        <div>
+          <h3>💬 Chat with Customer</h3>
+          <p style="font-size:.75rem; color:var(--slate-400); margin-top:.1rem;">Direct customer communication</p>
+        </div>
+        <button onclick="closeChat()" class="chat-close-btn">&times;</button>
+      </div>
+      <div id="chatMessages" class="chat-messages"></div>
+      <div class="chat-footer">
+        <input id="chatInput" type="text" placeholder="Type a message..." class="chat-input"
+          onkeydown="if(event.key==='Enter') sendChatMessage()" />
+        <button onclick="sendChatMessage()" class="btn btn-orange btn-sm">Send →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== IMAGE LIGHTBOX ========== -->
+  <div id="imageLightbox"
+    style="display:none; position:fixed; inset:0; z-index:2000; align-items:center; justify-content:center;"
+    onclick="closeLightbox()">
+    <button class="lb-close-btn" onclick="closeLightbox()">✕</button>
+    <img id="lightboxImage" src="" alt="Enlarged view" onclick="event.stopPropagation()" />
+  </div>
+
+  <!-- ========== QUOTE MODAL ========== -->
+  <div id="quoteModal"
+    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1000; align-items:center; justify-content:center; backdrop-filter:blur(6px);">
+    <div class="auth-card" style="max-width:400px; animation:popIn .35s cubic-bezier(0.34,1.56,0.64,1);">
+      <div style="text-align:center; margin-bottom:1.25rem;">
+        <div
+          style="width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,var(--orange-500),var(--orange-600));display:flex;align-items:center;justify-content:center;font-size:1.4rem;margin:0 auto .7rem;box-shadow:var(--shadow-orange);">
+          ✉️</div>
+        <h4 style="font-size:1.1rem; font-weight:700;">Send Quote</h4>
+        <p style="font-size:.82rem; color:var(--slate-400);">Make it competitive!</p>
+      </div>
+      <input type="hidden" id="modalRequestId" />
+      <div class="form-group">
+        <label class="form-label">Your Price (₹)</label>
+        <input class="form-input" id="modalPrice" type="number" min="1" placeholder="e.g. 599" required
+          style="font-size:1.1rem; font-weight:600;" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Message to Customer (optional)</label>
+        <textarea class="form-textarea" id="modalMessage" rows="2"
+          placeholder="Briefly explain what's included in this price..."></textarea>
+      </div>
+      <div style="display:flex; gap:.6rem;">
+        <button class="btn btn-orange" style="flex:1" onclick="submitQuote()">Send Quote →</button>
+        <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ========== DASHBOARD LAYOUT ========== -->
+  <div class="dash-layout">
+    <aside class="sidebar" id="sidebar" style="--sidebar-accent: var(--orange-500);">
+      <div class="sidebar-logo" style="color:var(--orange-400);">🔧 FixBit</div>
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="sidebarInitial"
+          style="background:linear-gradient(135deg,var(--orange-500),var(--orange-600)); box-shadow:0 4px 12px rgba(249,115,22,.3);">
+          S</div>
+        <div class="sidebar-user-info">
+          <div class="name" id="sidebarName">Shop</div>
+          <div class="role" style="color:var(--orange-400);">Shopkeeper</div>
+        </div>
+      </div>
+      <nav>
+        <button class="nav-item active" onclick="showTab('nearby', this)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+            <circle cx="12" cy="10" r="3" />
+          </svg>
+          Nearby Requests
+        </button>
+        <button class="nav-item" onclick="showTab('quotes', this)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+          </svg>
+          My Quotes
+        </button>
+        <button class="nav-item" onclick="showTab('profile', this)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="8" r="4" />
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          </svg>
+          Shop Profile
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="nav-item" onclick="logout()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+          </svg>
+          Log Out
+        </button>
+      </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <main class="dash-main">
+      <div class="dash-topbar">
+        <div>
+          <h2 class="font-outfit">Shop Dashboard</h2>
+          <div class="sub" id="topbarGreeting">Find and quote nearby repair requests</div>
+        </div>
+        <div style="display:flex; gap:.5rem; align-items:center;">
+          <!-- Live badge -->
+          <div
+            style="display:flex;align-items:center;gap:.4rem;background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.2);border-radius:99px;padding:.3rem .7rem;font-size:.73rem;color:#16a34a;font-weight:600;">
+            <span
+              style="width:7px;height:7px;border-radius:50%;background:#22c55e;display:inline-block;animation:pulseGlow 1.5s infinite;"></span>
+            Live
+          </div>
+          <button onclick="loadNearby()" class="btn btn-secondary btn-sm">🔄 Refresh</button>
+          <button onclick="toggleSidebar()" class="btn btn-outline btn-sm" id="hamburgerBtn" style="display:none;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="dash-content">
+
+        <!-- ====== NEARBY TAB ====== -->
+        <div id="tab-nearby">
+          <div id="locationWarning" class="mb-4"
+            style="display:none; padding:1rem 1.25rem; background:#fffbeb; border:1.5px solid #fde68a; border-radius:14px; align-items:center; gap:.75rem;">
+            <span style="font-size:1.4rem;">⚠️</span>
+            <div style="flex:1;">
+              <p style="font-weight:600; font-size:.88rem; color:#92400e;">Location not set</p>
+              <p style="font-size:.8rem; color:#b45309;">Set your shop location to start receiving nearby repair
+                requests</p>
+            </div>
+            <button onclick="updateShopLocation()" class="btn btn-sm"
+              style="background:#f59e0b;color:white;white-space:nowrap;">📍 Set Location</button>
+          </div>
+          <div id="nearbyList"></div>
+        </div>
+
+        <!-- ====== QUOTES TAB ====== -->
+        <div id="tab-quotes" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
+            <h3 style="font-size:1.05rem; font-weight:700; color:var(--slate-800);">Sent Quotes & Active Jobs</h3>
+            <button onclick="loadMyQuotes()" class="btn btn-secondary btn-sm">🔄 Refresh</button>
+          </div>
+          <div id="quotesList"></div>
+        </div>
+
+        <!-- ====== SHOP PROFILE TAB ====== -->
+        <div id="tab-profile" style="display:none;">
+          <div style="display: flex; justify-content: center; width: 100%;">
+            <div class="profile-container">
+              <!-- Profile Header -->
+              <div class="profile-header">
+                <div class="profile-image-wrapper">
+                  <img id="shopProfileImagePreview" src="" alt="Shop" class="profile-image">
+                  <label for="shopProfileImageInput" class="profile-image-upload-btn">📷</label>
+                  <input type="file" id="shopProfileImageInput" accept="image/*" style="display: none;" onchange="uploadShopProfileImage()">
+                </div>
+                <div class="profile-title">
+                  <h3 id="shopProfileName">Shop Name</h3>
+                  <p id="shopProfileRole">Shop Owner</p>
+                </div>
+              </div>
+
+              <!-- Profile Form -->
+              <form id="shopProfileForm" class="profile-form">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Shop Name</label>
+                    <input class="form-input" id="shopNameInput" type="text" required>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Phone Number</label>
+                    <input class="form-input" id="shopPhoneInput" type="tel" pattern="[0-9]{10}" required>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Email</label>
+                  <input class="form-input" id="shopEmailInput" type="email">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Address</label>
+                  <textarea class="form-textarea" id="shopAddressInput" rows="2" placeholder="Full shop address"></textarea>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Working Hours</label>
+                  <input class="form-input" id="shopHoursInput" placeholder="e.g., Mon-Sat 9 AM - 8 PM">
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Description</label>
+                  <textarea class="form-textarea" id="shopDescInput" rows="3" placeholder="Describe your services, experience, etc."></textarea>
+                </div>
+                <button type="submit" class="btn btn-orange btn-full">Save Changes</button>
+              </form>
+
+              <!-- Shop Gallery -->
+              <div class="shop-gallery-section">
+                <h4>Shop Photos</h4>
+                <div id="shopGallery" class="shop-gallery"></div>
+                <label for="shopImagesInput" class="btn btn-outline btn-sm gallery-upload-btn">+ Add Photos</label>
+                <input type="file" id="shopImagesInput" accept="image/*" multiple style="display: none;" onchange="uploadShopImages()">
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div> <!-- end dash-content -->
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+  <script>
+    let shopLat, shopLng;
+    let currentRequests = [];
+    let chatRequestId = null;
+    let chatReceiverId = null;
+    const user = checkAuth();
+
+    if (user) {
+      document.getElementById('sidebarName').innerText = user.name || 'Shop';
+      document.getElementById('sidebarInitial').innerText = (user.name || 'S')[0].toUpperCase();
+      document.getElementById('topbarGreeting').innerText = `Welcome, ${user.name?.split(' ')[0] || 'there'}! `;
+    } else window.location.href = 'login.html';
+
+    // ====== SIDEBAR ======
+    window.toggleSidebar = () => {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebarOverlay').classList.toggle('show');
+    };
+    window.closeSidebar = () => {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebarOverlay').classList.remove('show');
+    };
+    if (window.innerWidth < 768) document.getElementById('hamburgerBtn').style.display = 'flex';
+
+    // ====== LIGHTBOX ======
+    window.openLightbox = (imageUrl) => {
+      const lb = document.getElementById('imageLightbox');
+      document.getElementById('lightboxImage').src = imageUrl;
+      lb.style.display = 'flex';
+      requestAnimationFrame(() => lb.classList.add('lb-open'));
+      document.body.style.overflow = 'hidden';
+    };
+    window.closeLightbox = () => {
+      const lb = document.getElementById('imageLightbox');
+      lb.classList.remove('lb-open');
+      setTimeout(() => { lb.style.display = 'none'; document.body.style.overflow = 'auto'; }, 350);
+    };
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+    // ====== TABS ======
+    window.showTab = (tabId, el) => {
+      document.querySelectorAll('[id^="tab-"]').forEach(t => t.style.display = 'none');
+      document.getElementById(`tab-${tabId}`).style.display = 'block';
+      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+      el.classList.add('active');
+      closeSidebar();
+      if (tabId === 'nearby') loadNearby();
+      if (tabId === 'quotes') loadMyQuotes();
+      if (tabId === 'profile') loadShopProfile();
+    };
+
+    // ====== LOCATION ======
+    async function updateShopLocation() {
+      try {
+        const pos = await getCurrentPosition();
+        shopLat = pos.lat; shopLng = pos.lng;
+        await apiRequest('/shops/location', 'PUT', { latitude: shopLat, longitude: shopLng });
+        showToast('Location updated! 📍', 'success');
+        document.getElementById('locationWarning').style.display = 'none';
+        loadNearby();
+      } catch (e) {
+        showToast('Could not get location. Please enable GPS.', 'error');
+      }
+    }
+
+    // ====== NEARBY REQUESTS ======
+    async function loadNearby() {
+      if (!shopLat || !shopLng) {
+        if (user.latitude && user.longitude) {
+          shopLat = user.latitude; shopLng = user.longitude;
+        } else {
+          document.getElementById('locationWarning').style.display = 'flex';
+          document.getElementById('nearbyList').innerHTML = renderNearbyEmpty('location');
+          return;
+        }
+      }
+      const requests = await loadNearbyRequests(shopLat, shopLng);
+      currentRequests = requests;
+      renderNearby(requests);
+    }
+
+    function renderNearbyEmpty(reason) {
+      if (reason === 'location') {
+        return `<div class="empty-state">
+        <svg width="110" height="110" viewBox="0 0 110 110" fill="none">
+          <circle cx="55" cy="55" r="53" fill="#f0fdfa" stroke="#ccfbf1" stroke-width="2"/>
+          <circle cx="55" cy="48" r="20" fill="none" stroke="#14b8a6" stroke-width="3"/>
+          <circle cx="55" cy="48" r="6" fill="#14b8a6"/>
+          <path d="M55 68 Q35 85 55 98 Q75 85 55 68Z" fill="#14b8a6" opacity="0.6"/>
+          <circle cx="80" cy="30" r="4" fill="#f97316" opacity="0.5"/>
+          <circle cx="28" cy="38" r="3" fill="#f97316" opacity="0.4"/>
+        </svg>
+        <div class="empty-title">Set your location first</div>
+        <div class="empty-desc">We need your shop's location to show you nearby repair requests from customers.</div>
+        <button class="btn btn-primary btn-sm" onclick="updateShopLocation()">📍 Use My Location</button>
+      </div>`;
+      }
+      return `<div class="empty-state">
+      <svg width="110" height="110" viewBox="0 0 110 110" fill="none">
+        <circle cx="55" cy="55" r="53" fill="#f0fdfa" stroke="#ccfbf1" stroke-width="2"/>
+        <!-- Relaxed technician -->
+        <circle cx="55" cy="35" r="14" fill="#fbbf24"/>
+        <path d="M41 42 Q55 50 69 42" stroke="#fbbf24" stroke-width="8" stroke-linecap="round" fill="none"/>
+        <rect x="43" y="52" width="24" height="30" rx="8" fill="#0d9488"/>
+        <!-- Zzzs -->
+        <text x="72" y="32" fill="#2dd4bf" font-size="10" font-weight="bold" opacity="0.7">z</text>
+        <text x="78" y="24" fill="#2dd4bf" font-size="13" font-weight="bold" opacity="0.5">z</text>
+        <text x="86" y="16" fill="#2dd4bf" font-size="16" font-weight="bold" opacity="0.35">z</text>
+        <!-- Small phone on floor -->
+        <rect x="30" y="84" width="12" height="18" rx="3" fill="#334155"/>
+        <rect x="32" y="87" width="8" height="12" rx="2" fill="rgba(45,212,191,0.3)"/>
+      </svg>
+      <div class="empty-title">No nearby requests right now</div>
+      <div class="empty-desc">Customers in your area haven't posted any requests yet. Check back soon — it's quiet for now! 😴</div>
+      <button class="btn btn-secondary btn-sm" onclick="loadNearby()">🔄 Check Again</button>
+    </div>`;
+    }
+
+    function renderNearby(requests) {
+      const container = document.getElementById('nearbyList');
+      if (!requests.length) {
+        container.innerHTML = renderNearbyEmpty('empty');
+        return;
+      }
+      container.innerHTML = requests.map(r => {
+        let imageUrl = null;
+        if (r.image) imageUrl = r.image.startsWith('http') ? r.image : `${API_BASE.replace('/api', '')}/uploads/${r.image}`;
+        const deviceIcon = r.device_type === 'Laptop' ? '💻' : r.device_type === 'Tablet' ? '⬛' : '📱';
+        const distColor = r.distance < 5 ? '#16a34a' : r.distance < 15 ? '#0d9488' : '#64748b';
+        return `
+        <div class="request-card mb-3">
+          <div style="display:flex; gap:1rem; align-items:flex-start;">
+            ${imageUrl ? `
+              <div style="cursor:pointer;flex-shrink:0;" onclick="openLightbox('${imageUrl}')">
+                <img src="${imageUrl}" style="width:80px;height:80px;object-fit:cover;border-radius:12px;border:2px solid var(--slate-100);transition:transform .2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+              </div>` : `
+              <div style="width:80px;height:80px;border-radius:12px;background:var(--slate-100);display:flex;align-items:center;justify-content:center;font-size:2rem;flex-shrink:0;">${deviceIcon}</div>`}
+            <div style="flex:1; min-width:0;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:.5rem; margin-bottom:.35rem;">
+                <h4 style="font-weight:700; font-size:.95rem;">${deviceIcon} ${r.brand} ${r.model}</h4>
+                <span style="display:inline-flex;align-items:center;gap:.25rem;font-size:.73rem;font-weight:700;color:${distColor};background:${r.distance < 5 ? '#dcfce7' : r.distance < 15 ? 'var(--teal-50)' : 'var(--slate-50)'};padding:.25rem .65rem;border-radius:999px;white-space:nowrap;flex-shrink:0;">
+                  📍 ${r.distance.toFixed(1)} km
+                </span>
+              </div>
+              <p style="font-size:.8rem; color:var(--slate-400); margin-bottom:.35rem;">${r.device_type || 'Phone'} · ${r.issue_type}</p>
+              <p style="font-size:.85rem; color:var(--slate-600); margin-bottom:.75rem; line-height:1.5;">${r.description}</p>
+              <div style="display:flex; align-items:center; justify-content:space-between; gap:.5rem;">
+                <span style="font-size:.75rem; color:var(--slate-400);">Radius: ${r.radius} km</span>
+                <button class="btn btn-orange btn-sm" onclick="openQuoteModal(${r.id})">
+                   Send Quote
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    // ====== QUOTE MODAL ======
+    window.openQuoteModal = (requestId) => {
+      document.getElementById('modalRequestId').value = requestId;
+      document.getElementById('quoteModal').style.display = 'flex';
+      setTimeout(() => document.getElementById('modalPrice').focus(), 100);
+    };
+    window.closeModal = () => {
+      document.getElementById('quoteModal').style.display = 'none';
+      document.getElementById('modalPrice').value = '';
+      document.getElementById('modalMessage').value = '';
+    };
+    window.submitQuote = async () => {
+      const requestId = document.getElementById('modalRequestId').value;
+      const price = document.getElementById('modalPrice').value;
+      const message = document.getElementById('modalMessage').value;
+      if (!price || price <= 0) { showToast('Enter a valid price', 'error'); return; }
+      if (await sendQuote(requestId, price, message)) {
+        closeModal();
+        loadNearby();
+      }
+    };
+
+    // ====== MY QUOTES ======
+    async function loadMyQuotes() {
+      const quotes = await loadShopQuotes();
+      const container = document.getElementById('quotesList');
+      if (!quotes.length) {
+        container.innerHTML = `<div class="empty-state">
+        <svg width="110" height="110" viewBox="0 0 110 110" fill="none">
+          <circle cx="55" cy="55" r="53" fill="#fff7ed" stroke="#fed7aa" stroke-width="2"/>
+          <rect x="30" y="30" width="50" height="50" rx="10" fill="none" stroke="#fb923c" stroke-width="2.5" stroke-dasharray="6,4"/>
+          <path d="M38 50h34M38 60h24" stroke="#fb923c" stroke-width="2.5" stroke-linecap="round" opacity="0.5"/>
+          <circle cx="75" cy="35" r="12" fill="#f97316" opacity="0.15" stroke="#f97316" stroke-width="1.5"/>
+          <text x="75" y="39" text-anchor="middle" fill="#f97316" font-size="13">+</text>
+        </svg>
+        <div class="empty-title">No quotes sent yet</div>
+        <div class="empty-desc">Head to "Nearby Requests" to find repair jobs and start sending quotes to potential customers.</div>
+        <button class="btn btn-orange btn-sm" onclick="showTab('nearby', document.querySelector('[onclick*=nearby]'))">
+          📍 Browse Nearby Requests
+        </button>
+      </div>`;
+        return;
+      }
+      container.innerHTML = quotes.map(q => {
+        const isAccepted = ['accepted', 'in_progress', 'completed'].includes(q.request_status);
+        const deviceIcon = q.device_type === 'Laptop' ? '💻' : q.device_type === 'Tablet' ? '⬛' : '📱';
+        const statusOptions = ['accepted', 'in_progress', 'completed'];
+        const statusColors = { accepted: 'badge-teal', in_progress: 'badge-orange', completed: 'badge-green', pending: 'badge-slate' };
+        return `
+        <div class="request-card mb-3" style="${isAccepted ? 'border-color:var(--orange-200); background:linear-gradient(135deg,#fff7ed,white);' : ''}">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:.6rem;">
+            <div>
+              <h4 style="font-weight:700; font-size:.95rem;">${deviceIcon} ${q.brand} ${q.model}</h4>
+              <p style="font-size:.8rem; color:var(--slate-400); margin-top:.15rem;">Customer: ${q.user_name}</p>
+            </div>
+            <div class="price-tag" style="color:var(--orange-600);">₹${q.price}</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:.5rem; margin-bottom:.7rem;">
+            <span class="badge ${statusColors[q.request_status] || 'badge-slate'}">${q.request_status.replace('_', ' ')}</span>
+            ${q.request_status === 'completed' ? '<span style="font-size:.8rem; color:#16a34a;">✅ Job completed</span>' : ''}
+          </div>
+          ${isAccepted ? `
+            <div style="display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;">
+              <select class="form-select" style="font-size:.83rem; max-width:170px;" id="status-${q.request_id}" onchange="updateStatus(${q.request_id}, this.value)">
+                ${statusOptions.map(s => `<option value="${s}" ${q.request_status === s ? 'selected' : ''}>${s.replace('_', ' ')}</option>`).join('')}
+              </select>
+              <button class="btn btn-sm btn-outline" onclick="openChat(${q.request_id}, ${q.user_id})">💬 Chat</button>
+            </div>` : `
+            <p style="font-size:.8rem; color:var(--slate-400);">⏳ Waiting for customer to accept your quote</p>`}
+        </div>`;
+      }).join('');
+    }
+
+    window.updateStatus = async (requestId, status) => {
+      if (await updateRequestStatus(requestId, status)) loadMyQuotes();
+    };
+
+    // ====== CHAT ======
+    window.openChat = async (requestId, userId) => {
+      chatRequestId = requestId; chatReceiverId = userId;
+      document.getElementById('chatModal').style.display = 'flex';
+      await loadChatMessages();
+    };
+    window.closeChat = () => document.getElementById('chatModal').style.display = 'none';
+    async function loadChatMessages() {
+      const data = await getMessages(chatRequestId);
+      const container = document.getElementById('chatMessages');
+      if (!data.success) return;
+      if (!data.messages.length) {
+        container.innerHTML = '<div style="text-align:center;color:var(--slate-400);font-size:.83rem;padding:2rem;">No messages yet. Start the conversation! 👋</div>';
+        return;
+      }
+      container.innerHTML = data.messages.map(m => `
+      <div class="chat-bubble ${m.sender_id === user.id ? 'sent' : 'received'}" style="${m.sender_id === user.id ? 'background:linear-gradient(135deg,var(--orange-500),var(--orange-600));' : ''}">${m.body}</div>
+      <div style="font-size:.7rem; color:var(--slate-300); text-align:${m.sender_id === user.id ? 'right' : 'left'}; margin-bottom:.4rem;">${m.sender_name}</div>`).join('');
+      container.scrollTop = container.scrollHeight;
+      await markMessagesRead(chatRequestId);
+    }
+    window.sendChatMessage = async () => {
+      const input = document.getElementById('chatInput');
+      const body = input.value.trim();
+      if (!body) return;
+      await sendMessage(chatRequestId, chatReceiverId, body);
+      input.value = '';
+      await loadChatMessages();
+    };
+
+    // ====== INIT ======
+    (async () => {
+      if (user.latitude && user.longitude) { shopLat = user.latitude; shopLng = user.longitude; }
+      loadNearby();
+    })();
+
+    // ==================== SHOP PROFILE MANAGEMENT ====================
+    async function loadShopProfile() {
+      try {
+        const data = await apiRequest('/users/profile');
+        if (data.success) {
+          const p = data.profile;
+          document.getElementById('shopProfileName').innerText = p.name || 'Shop';
+          document.getElementById('shopNameInput').value = p.name || '';
+          document.getElementById('shopPhoneInput').value = p.phone || '';
+          document.getElementById('shopEmailInput').value = p.email || '';
+          document.getElementById('shopAddressInput').value = p.address || '';
+          document.getElementById('shopHoursInput').value = p.working_hours || '';
+          document.getElementById('shopDescInput').value = p.description || '';
+          
+          const img = document.getElementById('shopProfileImagePreview');
+          if (p.profile_image) {
+            img.src = p.profile_image.startsWith('http') ? p.profile_image : API_BASE.replace('/api', '') + p.profile_image;
+          } else {
+            img.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.name || 'Shop') + '&background=f97316&color=fff';
+          }
+          
+          loadShopGallery();
+        }
+      } catch (e) {
+        showToast('Failed to load profile', 'error');
+      }
+    }
+
+    async function uploadShopProfileImage() {
+      const file = document.getElementById('shopProfileImageInput').files[0];
+      if (!file) return;
+      const formData = new FormData();
+      formData.append('image', file);
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch(`${API_BASE}/users/profile/image`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+          document.getElementById('shopProfileImagePreview').src = API_BASE.replace('/api', '') + data.imageUrl + '?t=' + Date.now();
+          showToast('Profile picture updated', 'success');
+        }
+      } catch (e) {
+        showToast('Upload failed', 'error');
+      }
+    }
+
+    async function loadShopGallery() {
+      try {
+        const data = await apiRequest(`/users/shop/${user.id}/images`);
+        if (data.success) {
+          const container = document.getElementById('shopGallery');
+          container.innerHTML = data.images.map(img => `
+            <img src="${API_BASE.replace('/api', '') + img.image_url}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;">
+          `).join('');
+        }
+      } catch (e) {}
+    }
+
+    async function uploadShopImages() {
+      const files = document.getElementById('shopImagesInput').files;
+      if (!files.length) return;
+      const formData = new FormData();
+      for (let file of files) formData.append('images', file);
+      
+      const token = localStorage.getItem('token');
+      try {
+        const res = await fetch(`${API_BASE}/users/shop/images`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+          body: formData
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast('Images uploaded', 'success');
+          loadShopGallery();
+        }
+      } catch (e) {
+        showToast('Upload failed', 'error');
+      }
+    }
+
+    document.getElementById('shopProfileForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        name: document.getElementById('shopNameInput').value,
+        phone: document.getElementById('shopPhoneInput').value,
+        email: document.getElementById('shopEmailInput').value,
+        address: document.getElementById('shopAddressInput').value,
+        working_hours: document.getElementById('shopHoursInput').value,
+        description: document.getElementById('shopDescInput').value
+      };
+      if (!/^\d{10}$/.test(payload.phone)) {
+        showToast('Phone must be 10 digits', 'error');
+        return;
+      }
+      try {
+        const res = await apiRequest('/users/profile', 'PUT', payload);
+        if (res.success) {
+          showToast('Profile updated', 'success');
+          document.getElementById('sidebarName').innerText = payload.name;
+          loadShopProfile();
+        }
+      } catch (e) {
+        showToast('Update failed', 'error');
+      }
+    });
+  </script>
+</body>
+
+</html>

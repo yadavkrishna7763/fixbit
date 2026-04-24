@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FixBit — User Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+
+<body>
+
+  <!-- ========== ENHANCED CHAT MODAL ========== -->
+  <div id="chatModal"
+    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1000; align-items:flex-end; justify-content:center; backdrop-filter:blur(6px);">
+    <div class="chat-modal-inner" style="animation:fadeUp .3s cubic-bezier(0.34,1.56,0.64,1);">
+      <div class="chat-header">
+        <div>
+          <h3>💬 Chat with Shop</h3>
+          <p style="font-size:.75rem; color:var(--slate-400); margin-top:.1rem;">Messages are end-to-end</p>
+        </div>
+        <button onclick="closeChat()" class="chat-close-btn">&times;</button>
+      </div>
+      <div id="chatMessages" class="chat-messages"></div>
+      <div class="chat-footer">
+        <input id="chatInput" type="text" placeholder="Type a message..." class="chat-input"
+          onkeydown="if(event.key==='Enter') sendChatMessage()" />
+        <button onclick="sendChatMessage()" class="btn btn-primary btn-sm">Send →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== REVIEW MODAL ========== -->
+  <div id="reviewModal"
+    style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.55); z-index:1000; align-items:center; justify-content:center; backdrop-filter:blur(6px);">
+    <div class="auth-card" style="max-width:400px; animation:popIn .35s cubic-bezier(0.34,1.56,0.64,1);">
+      <div style="text-align:center; margin-bottom:1.2rem;">
+        <div style="font-size:2.5rem; margin-bottom:.5rem;">⭐</div>
+        <h3 style="font-size:1.15rem;">Rate Your Experience</h3>
+        <p style="font-size:.83rem; color:var(--slate-400);">Help others by sharing your experience</p>
+      </div>
+      <input type="hidden" id="reviewRequestId" />
+      <div class="form-group">
+        <label class="form-label">Rating</label>
+        <!-- Star rating UI -->
+        <div id="starRating" style="display:flex; gap:.4rem; margin-bottom:.4rem;">
+          <button type="button" class="star-btn" data-val="1" onclick="setRating(1)"
+            style="font-size:1.8rem; background:none; border:none; cursor:pointer; transition:transform .15s;">☆</button>
+          <button type="button" class="star-btn" data-val="2" onclick="setRating(2)"
+            style="font-size:1.8rem; background:none; border:none; cursor:pointer; transition:transform .15s;">☆</button>
+          <button type="button" class="star-btn" data-val="3" onclick="setRating(3)"
+            style="font-size:1.8rem; background:none; border:none; cursor:pointer; transition:transform .15s;">☆</button>
+          <button type="button" class="star-btn" data-val="4" onclick="setRating(4)"
+            style="font-size:1.8rem; background:none; border:none; cursor:pointer; transition:transform .15s;">☆</button>
+          <button type="button" class="star-btn" data-val="5" onclick="setRating(5)"
+            style="font-size:1.8rem; background:none; border:none; cursor:pointer; transition:transform .15s;">☆</button>
+        </div>
+        <input type="hidden" id="reviewRating" value="5" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Comment (optional)</label>
+        <textarea class="form-textarea" id="reviewComment" rows="2"
+          placeholder="What did you love about this shop?"></textarea>
+      </div>
+      <div style="display:flex; gap:.6rem;">
+        <button class="btn btn-primary" style="flex:1" onclick="submitReview()">Submit Review</button>
+        <button class="btn btn-outline" style="flex:1" onclick="closeReviewModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== ENHANCED IMAGE LIGHTBOX ========== -->
+  <div id="imageLightbox"
+    style="display:none; position:fixed; inset:0; z-index:2000; align-items:center; justify-content:center;"
+    onclick="closeLightbox()">
+    <button class="lb-close-btn" onclick="closeLightbox()" style="z-index:1;">✕</button>
+    <img id="lightboxImage" src="" alt="Enlarged view" onclick="event.stopPropagation()" />
+  </div>
+
+  <!-- ========== DASHBOARD LAYOUT ========== -->
+  <div class="dash-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-logo"> FixBit</div>
+      <div class="sidebar-user">
+        <div class="sidebar-avatar" id="sidebarInitial">U</div>
+        <div class="sidebar-user-info">
+          <div class="name" id="sidebarName">User</div>
+          <div class="role">User Account</div>
+        </div>
+      </div>
+      <nav>
+        <button class="nav-item active" onclick="showTab('newRequest', this)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 5v14M5 12h14" />
+          </svg>
+          New Request
+        </button>
+        <button class="nav-item" onclick="showTab('myRequests', this)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" />
+            <rect x="9" y="3" width="6" height="4" rx="1" />
+          </svg>
+          My Requests
+        </button>
+        <button class="nav-item" onclick="showTab('quotes', this)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+          Quotes
+        </button>
+        <button class="nav-item" onclick="showTab('shops', this)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
+          </svg>
+          Find Shops
+        </button>
+        <button class="nav-item" onclick="showTab('profile', this)">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="8" r="4" />
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          </svg>
+          Profile
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="nav-item" onclick="logout()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+          </svg>
+          Log Out
+        </button>
+      </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <main class="dash-main">
+      <div class="dash-topbar">
+        <div>
+          <h2 class="font-outfit">User Dashboard</h2>
+          <div class="sub" id="topGreeting">Manage your repair requests</div>
+        </div>
+        <button onclick="toggleSidebar()" class="btn btn-outline btn-sm" id="hamburgerBtn" style="display:none;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="dash-content">
+        <!-- ====== PROFILE TAB ====== -->
+        <div id="tab-profile" style="display:none;">
+          <div class="card" style="padding: 2rem; max-width: 600px;">
+            <div style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2rem;">
+              <div style="position: relative;">
+                <img id="profileImagePreview" src="" alt="Profile"
+                  style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover; border: 3px solid var(--teal-200);">
+                <label for="profileImageInput"
+                  style="position: absolute; bottom: 0; right: 0; background: var(--teal-500); color: white; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: var(--shadow-md);">📷</label>
+                <input type="file" id="profileImageInput" accept="image/*" style="display: none;"
+                  onchange="uploadProfileImage()">
+              </div>
+              <div>
+                <h3 style="font-size: 1.3rem; font-weight: 700;" id="profileName"></h3>
+                <p style="color: var(--slate-400);" id="profileRole"></p>
+              </div>
+            </div>
+
+            <form id="profileForm">
+              <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input class="form-input" id="profileNameInput" type="text" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Phone Number</label>
+                <input class="form-input" id="profilePhoneInput" type="tel" pattern="[0-9]{10}" required>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email</label>
+                <input class="form-input" id="profileEmailInput" type="email">
+              </div>
+              <button type="submit" class="btn btn-primary btn-full">Save Changes</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- ====== NEW REQUEST TAB ====== -->
+        <div id="tab-newRequest">
+          <div class="card" style="padding:2rem; max-width:640px;">
+            <div
+              style="display:flex; align-items:center; gap:.8rem; margin-bottom:1.5rem; padding-bottom:1.25rem; border-bottom:1px solid var(--slate-100);">
+              <div
+                style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--teal-500),var(--teal-700));display:flex;align-items:center;justify-content:center;font-size:1.2rem;">
+              </div>
+              <div>
+                <h3 style="font-size:1.05rem; font-weight:700; color:var(--slate-800);">Submit Repair Request</h3>
+                <p style="font-size:.8rem; color:var(--slate-400);">Tell shops what needs fixing</p>
+              </div>
+            </div>
+            <form id="requestForm">
+              <div class="form-group">
+                <label class="form-label">Device Type</label>
+                <select class="form-select" id="deviceType" required onchange="onDeviceTypeChange()">
+                  <option value="">— Select your device —</option>
+                  <option value="Phone">📱 Smartphone</option>
+                  <option value="Tablet">⬛ Tablet / iPad</option>
+                  <option value="Laptop">💻 Laptop / Notebook</option>
+                </select>
+              </div>
+              <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                <div class="form-group">
+                  <label class="form-label">Brand</label>
+                  <select class="form-select" id="brand" required onchange="populateModels()">
+                    <option value="">Select Brand</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Model</label>
+                  <select class="form-select" id="modelSelect" required onchange="handleModelSelect()">
+                    <option value="">Select Model</option>
+                  </select>
+                  <input class="form-input" id="modelCustom" type="text" placeholder="Type model name"
+                    style="display:none; margin-top:.5rem;" />
+                  <input type="hidden" id="model" name="model" />
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Issue Type</label>
+                <select class="form-select" id="issue_type" required>
+                  <option value="">— Select an issue —</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea class="form-textarea" id="description" rows="3"
+                  placeholder="Describe the issue in detail — the more info you give, the better the quotes will be..."
+                  required></textarea>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Photo (optional but recommended)</label>
+                <div class="file-upload-area" id="uploadArea">
+                  <span class="icon">📸</span>
+                  <p>Click to upload or drag & drop</p>
+                  <p style="margin-top:.25rem; font-size:.75rem; color:var(--slate-300);">JPG, PNG, WEBP up to 10MB</p>
+                  <input type="file" id="image" accept="image/*" onchange="previewImage(this)" />
+                </div>
+                <div id="imagePreview" style="display:none; margin-top:.6rem; position:relative; display:inline-block;">
+                  <img id="previewImg" src=""
+                    style="width:80px;height:80px;object-fit:cover;border-radius:10px;border:2px solid var(--teal-200);"
+                    alt="preview" />
+                  <button type="button" onclick="clearImage()"
+                    style="position:absolute;top:-6px;right:-6px;width:22px;height:22px;border-radius:50%;background:#dc2626;border:none;color:white;font-size:.75rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Search Radius</label>
+                <div class="radius-selector" id="radiusGroup">
+                  <button type="button" class="radius-btn" data-radius="5">5 km</button>
+                  <button type="button" class="radius-btn selected" data-radius="10">10 km</button>
+                  <button type="button" class="radius-btn" data-radius="20">20 km</button>
+                  <button type="button" class="radius-btn" data-radius="40">40 km</button>
+                </div>
+                <input type="hidden" id="radius" value="10" />
+                <p style="font-size:.75rem; color:var(--slate-400); margin-top:.4rem;">Only shops within this distance
+                  will see your request</p>
+              </div>
+              <input type="hidden" id="latitude" />
+              <input type="hidden" id="longitude" />
+              <input type="hidden" id="device_type_hidden" name="device_type" />
+              <button type="submit" class="btn btn-primary btn-full btn-lg" style="margin-top:.5rem;">
+                Submit Request →
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- ====== MY REQUESTS TAB ====== -->
+        <div id="tab-myRequests" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
+            <h3 style="font-size:1.05rem; font-weight:700; color:var(--slate-800);">My Repair Requests</h3>
+            <button onclick="loadMyRequests()" class="btn btn-secondary btn-sm">🔄 Refresh</button>
+          </div>
+          <div id="requestsList"></div>
+        </div>
+
+        <!-- ====== QUOTES TAB ====== -->
+        <div id="tab-quotes" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
+            <h3 style="font-size:1.05rem; font-weight:700; color:var(--slate-800);">Quotes Received</h3>
+          </div>
+          <div id="quotesList"></div>
+        </div>
+
+
+        <!-- ====== SHOPS TAB WITH MAP ====== -->
+        <div id="tab-shops" style="display:none;">
+          <div style="display: flex; flex-direction: column; height: calc(100vh - 120px);">
+            <!-- Search Bar -->
+            <div style="padding: 0 0 1rem 0; display: flex; gap: 0.6rem;">
+              <input type="text" id="shopSearchInput" placeholder="Search by shop name..." class="form-input"
+                style="flex:1;" />
+              <button onclick="searchShops()" class="btn btn-primary">🔍 Search</button>
+              <button onclick="loadNearbyShopsOnMap()" class="btn btn-secondary btn-sm" title="Refresh map">🔄</button>
+            </div>
+
+            <!-- Map Container -->
+            <div id="shopsMap"
+              style="flex:1; min-height: 350px; border-radius: 16px; border: 1px solid var(--slate-200); overflow: hidden; box-shadow: var(--shadow-md);">
+            </div>
+
+            <!-- Shop List (optional, can be toggled) -->
+            <div style="margin-top: 1rem; max-height: 200px; overflow-y: auto;">
+              <div id="shopSearchResults" style="display: grid; gap: 0.5rem;"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="toast-container" id="toastContainer"></div>
+        <script src="script.js"></script>
+        <script>
+          // ==================== PROFILE MANAGEMENT ====================
+          async function loadProfile() {
+            try {
+              const data = await apiRequest('/users/profile');
+              if (data.success) {
+                const p = data.profile;
+                document.getElementById('profileName').innerText = p.name || 'User';
+                document.getElementById('profileRole').innerText = p.role === 'shop' ? 'Shop Owner' : 'Customer';
+                document.getElementById('profileNameInput').value = p.name || '';
+                document.getElementById('profilePhoneInput').value = p.phone || '';
+                document.getElementById('profileEmailInput').value = p.email || '';
+
+                const img = document.getElementById('profileImagePreview');
+                if (p.profile_image) {
+                  img.src = p.profile_image.startsWith('http') ? p.profile_image : API_BASE.replace('/api', '') + p.profile_image;
+                } else {
+                  img.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.name || 'User') + '&background=14b8a6&color=fff';
+                }
+              }
+            } catch (e) {
+              showToast('Failed to load profile', 'error');
+            }
+          }
+
+          async function uploadProfileImage() {
+            const file = document.getElementById('profileImageInput').files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('image', file);
+
+            const token = localStorage.getItem('token');
+            try {
+              const res = await fetch(`${API_BASE}/users/profile/image`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+              });
+              const data = await res.json();
+              if (data.success) {
+                document.getElementById('profileImagePreview').src = API_BASE.replace('/api', '') + data.imageUrl + '?t=' + Date.now();
+                showToast('Profile picture updated', 'success');
+              } else {
+                showToast(data.message || 'Upload failed', 'error');
+              }
+            } catch (e) {
+              showToast('Upload failed', 'error');
+            }
+          }
+
+          document.getElementById('profileForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('profileNameInput').value;
+            const phone = document.getElementById('profilePhoneInput').value;
+            const email = document.getElementById('profileEmailInput').value;
+
+            if (!/^\d{10}$/.test(phone)) {
+              showToast('Phone must be 10 digits', 'error');
+              return;
+            }
+
+            try {
+              const res = await apiRequest('/users/profile', 'PUT', { name, phone, email });
+              if (res.success) {
+                showToast('Profile updated', 'success');
+                document.getElementById('sidebarName').innerText = name;
+                loadProfile();
+              }
+            } catch (e) {
+              showToast('Update failed', 'error');
+            }
+          });
+          // ==================== DEVICE CATALOG ====================
+          const deviceCatalog = {
+            Phone: {
+              brands: {
+                Apple: ['iPhone 15 Pro Max', 'iPhone 15 Pro', 'iPhone 15 Plus', 'iPhone 15', 'iPhone 14 Pro Max', 'iPhone 14 Pro', 'iPhone 14', 'iPhone 13', 'iPhone SE (2022)', 'iPhone 12', 'iPhone 11', 'iPhone XR', 'iPhone X'],
+                Samsung: ['Galaxy S24 Ultra', 'Galaxy S24+', 'Galaxy S24', 'Galaxy S23 Ultra', 'Galaxy S23', 'Galaxy Z Fold5', 'Galaxy Z Flip5', 'Galaxy A54', 'Galaxy A34', 'Galaxy M34'],
+                Google: ['Pixel 8 Pro', 'Pixel 8', 'Pixel 7a', 'Pixel 7 Pro', 'Pixel 7', 'Pixel 6a'],
+                OnePlus: ['OnePlus 12', 'OnePlus 12R', 'OnePlus 11', 'OnePlus Nord 3', 'OnePlus 10 Pro'],
+                Xiaomi: ['Xiaomi 14 Ultra', 'Xiaomi 14', 'Redmi Note 13 Pro+', 'Redmi Note 13', 'Poco F5', 'Poco X6 Pro'],
+                Oppo: ['Oppo Find X7', 'Oppo Reno11 Pro', 'Oppo Reno11', 'Oppo F25 Pro', 'Oppo A79'],
+                Vivo: ['Vivo X100 Pro', 'Vivo X100', 'Vivo V30 Pro', 'Vivo V29', 'Vivo Y200'],
+                Realme: ['Realme GT 5 Pro', 'Realme 12 Pro+', 'Realme 12+', 'Realme 11 Pro', 'Realme Narzo 70 Pro'],
+                Motorola: ['Moto G84 5G', 'Moto G54 5G', 'Moto Edge 50 Pro', 'Moto Edge 40 Neo', 'Moto Razr 40 Ultra'],
+                Nothing: ['Nothing Phone (2a)', 'Nothing Phone (2)', 'Nothing Phone (1)'],
+                Other: []
+              },
+              issues: [
+                { group: '——— DISPLAY & SCREEN ———', options: ['Screen cracked', 'Touch not working', 'Display flickering', 'Dead pixels', 'Backlight issue', 'LCD replacement'] },
+                { group: '——— BATTERY & POWER ———', options: ['Battery draining fast', 'Not charging', 'Phone dead', 'Overheating', 'Battery replacement', 'Charging port loose'] },
+                { group: '——— AUDIO & SPEAKERS ———', options: ['Speaker not working', 'Microphone issue', 'Earpiece problem', 'No sound'] },
+                { group: '——— CAMERA ———', options: ['Rear camera not working', 'Front camera blurry', 'Camera glass broken', 'Flash not working'] },
+                { group: '——— CONNECTIVITY ———', options: ['WiFi not connecting', 'Bluetooth issue', 'No signal', 'GPS problem'] },
+                { group: '——— WATER DAMAGE ———', options: ['Water damage', 'Liquid contact'] },
+                { group: '——— SOFTWARE ———', options: ['Phone frozen', 'Apps crashing', 'Software update failed', 'Boot loop', 'Factory reset'] },
+                { group: '——— OTHERS ———', options: ['Fingerprint not working', 'Face unlock issue', 'Vibration not working', 'Other'] }
+              ]
+            },
+            Tablet: {
+              brands: {
+                Apple: ['iPad Pro 12.9"', 'iPad Pro 11"', 'iPad Air', 'iPad (10th gen)', 'iPad mini', 'iPad (9th gen)'],
+                Samsung: ['Galaxy Tab S9 Ultra', 'Galaxy Tab S9+', 'Galaxy Tab S9', 'Galaxy Tab S8', 'Galaxy Tab A9+', 'Galaxy Tab A8'],
+                Lenovo: ['Tab P12 Pro', 'Tab M10 Plus', 'Yoga Tab 11', 'Tab P11', 'Tab M9'],
+                Xiaomi: ['Pad 6', 'Pad 6 Pro', 'Redmi Pad SE', 'Redmi Pad'],
+                OnePlus: ['OnePlus Pad', 'OnePlus Pad Go'],
+                Amazon: ['Fire HD 10', 'Fire HD 8', 'Fire 7'],
+                Other: []
+              },
+              issues: [
+                { group: '——— DISPLAY ———', options: ['Screen cracked', 'Touch not responding', 'Display flickering', 'Dead pixels'] },
+                { group: '——— BATTERY & POWER ———', options: ['Battery draining fast', 'Not charging', 'Battery replacement'] },
+                { group: '——— AUDIO ———', options: ['Speaker not working', 'Headphone jack issue'] },
+                { group: '——— CONNECTIVITY ———', options: ['WiFi issue', 'Bluetooth not working'] },
+                { group: '——— SOFTWARE ———', options: ['Tablet frozen', 'Apps crashing', 'Factory reset', 'Update failed'] },
+                { group: '——— HARDWARE ———', options: ['Charging port loose', 'Buttons not working', 'Camera issue'] }
+              ]
+            },
+            Laptop: {
+              brands: {
+                Apple: ['MacBook Pro 16"', 'MacBook Pro 14"', 'MacBook Air 15"', 'MacBook Air 13"', 'MacBook Pro 13" (M1/M2)'],
+                Dell: ['XPS 15', 'XPS 13', 'Inspiron 15', 'Inspiron 14', 'Latitude 5440', 'Precision 5570'],
+                HP: ['Spectre x360', 'Envy x360', 'Pavilion 15', 'EliteBook 840', 'ProBook 450', 'Victus 16'],
+                Lenovo: ['ThinkPad X1 Carbon', 'ThinkPad T14', 'ThinkBook 14', 'IdeaPad 5', 'Legion 5', 'Yoga 7i'],
+                Asus: ['Zenbook 14', 'Vivobook 15', 'ROG Strix G16', 'TUF Gaming A15', 'ExpertBook B9'],
+                Acer: ['Swift 5', 'Aspire 5', 'Nitro 5', 'Predator Helios 16', 'Chromebook Spin 714'],
+                Microsoft: ['Surface Laptop 5', 'Surface Laptop Studio', 'Surface Pro 9', 'Surface Go 3'],
+                Samsung: ['Galaxy Book3 Pro', 'Galaxy Book3 360', 'Galaxy Book2'],
+                Other: []
+              },
+              issues: [
+                { group: '——— DISPLAY ———', options: ['Screen cracked', 'No display', 'Flickering screen', 'Dead pixels', 'Backlight issue'] },
+                { group: '——— BATTERY & POWER ———', options: ['Battery not charging', 'Battery drains quickly', 'Laptop not turning on', 'Overheating', 'Battery replacement'] },
+                { group: '——— KEYBOARD & TOUCHPAD ———', options: ['Keys not working', 'Keyboard replacement', 'Touchpad not responding', 'Spilled liquid'] },
+                { group: '——— PERFORMANCE ———', options: ['Slow performance', 'Freezing/hanging', 'Blue screen errors', 'Random restarts'] },
+                { group: '——— STORAGE & MEMORY ———', options: ['Hard drive failure', 'SSD upgrade', 'RAM upgrade', 'Data recovery'] },
+                { group: '——— AUDIO & SPEAKERS ———', options: ['No sound', 'Speakers crackling', 'Microphone not working', 'Headphone jack issue'] },
+                { group: '——— CONNECTIVITY ———', options: ['WiFi not working', 'Bluetooth issue', 'Ethernet port not working'] },
+                { group: '——— PORTS & CHARGING ———', options: ['USB port not working', 'HDMI port issue', 'Charging port loose', 'Power adapter issue'] },
+                { group: '——— FAN & COOLING ———', options: ['Fan noise', 'Fan not spinning', 'Overheating shutdowns'] },
+                { group: '——— SOFTWARE & OS ———', options: ['Windows not booting', 'macOS reinstall', 'Virus/malware removal', 'Driver issues'] },
+                { group: '——— HARDWARE REPAIRS ———', options: ['Hinge broken', 'Case damage', 'Screen replacement', 'Motherboard repair'] }
+              ]
+            }
+          };
+
+          // ==================== STATE ====================
+          let currentRequestId = null;
+          let chatRequestId = null;
+          let chatReceiverId = null;
+          let selectedRating = 5;
+
+          const user = checkAuth();
+          if (user) {
+            document.getElementById('sidebarName').innerText = user.name || 'User';
+            document.getElementById('sidebarInitial').innerText = (user.name || 'U')[0].toUpperCase();
+            document.getElementById('topGreeting').innerText = `Welcome back, ${user.name?.split(' ')[0] || 'there'}!`;
+          } else window.location.href = 'login.html';
+
+          // ==================== MOBILE SIDEBAR ====================
+          window.toggleSidebar = () => {
+            const sb = document.getElementById('sidebar');
+            const ov = document.getElementById('sidebarOverlay');
+            sb.classList.toggle('open');
+            ov.classList.toggle('show');
+          };
+          window.closeSidebar = () => {
+            document.getElementById('sidebar').classList.remove('open');
+            document.getElementById('sidebarOverlay').classList.remove('show');
+          };
+          if (window.innerWidth < 768) document.getElementById('hamburgerBtn').style.display = 'flex';
+
+          // ==================== TAB SWITCHING ====================
+          window.showTab = (tabId, el) => {
+            document.querySelectorAll('[id^="tab-"]').forEach(t => t.style.display = 'none');
+            document.getElementById(`tab-${tabId}`).style.display = 'block';
+            document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+            closeSidebar();
+            if (tabId === 'myRequests') loadMyRequests();
+            if (tabId === 'quotes' && currentRequestId) loadQuotesForCurrentRequest();
+            if (tabId === 'profile') loadProfile();
+          };
+
+          // ==================== RADIUS SELECTOR ====================
+          document.querySelectorAll('[data-radius]').forEach(btn => btn.addEventListener('click', function () {
+            document.querySelectorAll('[data-radius]').forEach(b => b.classList.remove('selected'));
+            this.classList.add('selected');
+            document.getElementById('radius').value = this.dataset.radius;
+          }));
+
+          // ==================== LOCATION ====================
+          window.addEventListener('load', async () => {
+            try {
+              const pos = await getCurrentPosition();
+              document.getElementById('latitude').value = pos.lat;
+              document.getElementById('longitude').value = pos.lng;
+            } catch (e) { }
+            loadMyRequests();
+          });
+
+          // ==================== IMAGE PREVIEW ====================
+          window.previewImage = (input) => {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              document.getElementById('previewImg').src = e.target.result;
+              document.getElementById('imagePreview').style.display = 'inline-block';
+            };
+            reader.readAsDataURL(file);
+          };
+          window.clearImage = () => {
+            document.getElementById('image').value = '';
+            document.getElementById('imagePreview').style.display = 'none';
+          };
+
+          // ==================== DEVICE CATALOG ====================
+          function onDeviceTypeChange() {
+            const deviceType = document.getElementById('deviceType').value;
+            document.getElementById('device_type_hidden').value = deviceType;
+            const brandSelect = document.getElementById('brand');
+            brandSelect.innerHTML = '<option value="">Select Brand</option>';
+            if (deviceType && deviceCatalog[deviceType]) {
+              Object.keys(deviceCatalog[deviceType].brands).forEach(brand => {
+                const o = document.createElement('option');
+                o.value = brand; o.textContent = brand;
+                brandSelect.appendChild(o);
+              });
+            }
+            document.getElementById('modelSelect').innerHTML = '<option value="">Select Model</option>';
+            document.getElementById('modelSelect').style.display = 'block';
+            document.getElementById('modelCustom').style.display = 'none';
+            document.getElementById('model').value = '';
+            populateIssueTypes(deviceType);
+          }
+          function populateModels() {
+            const deviceType = document.getElementById('deviceType').value;
+            const brand = document.getElementById('brand').value;
+            const modelSelect = document.getElementById('modelSelect');
+            const customInput = document.getElementById('modelCustom');
+            modelSelect.innerHTML = '<option value="">Select Model</option>';
+            if (deviceType && brand && deviceCatalog[deviceType].brands[brand]) {
+              const models = deviceCatalog[deviceType].brands[brand];
+              if (models.length > 0) {
+                models.forEach(model => {
+                  const o = document.createElement('option');
+                  o.value = model; o.textContent = model;
+                  modelSelect.appendChild(o);
+                });
+                modelSelect.style.display = 'block';
+                customInput.style.display = 'none';
+              } else {
+                modelSelect.style.display = 'none';
+                customInput.style.display = 'block';
+              }
+            }
+            updateHiddenModel();
+          }
+          function handleModelSelect() {
+            const brand = document.getElementById('brand').value;
+            if (brand === 'Other') {
+              document.getElementById('modelCustom').style.display = 'block';
+              document.getElementById('modelSelect').style.display = 'none';
+            } else {
+              document.getElementById('modelCustom').style.display = 'none';
+            }
+            updateHiddenModel();
+          }
+          function updateHiddenModel() {
+            const brand = document.getElementById('brand').value;
+            const modelSelect = document.getElementById('modelSelect');
+            const customInput = document.getElementById('modelCustom');
+            document.getElementById('model').value = (brand === 'Other') ? customInput.value : modelSelect.value;
+          }
+          function populateIssueTypes(deviceType) {
+            const issueSelect = document.getElementById('issue_type');
+            issueSelect.innerHTML = '<option value="">— Select an issue —</option>';
+            if (deviceType && deviceCatalog[deviceType]) {
+              deviceCatalog[deviceType].issues.forEach(group => {
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = group.group;
+                group.options.forEach(issue => {
+                  const o = document.createElement('option');
+                  o.value = issue; o.textContent = issue;
+                  optgroup.appendChild(o);
+                });
+                issueSelect.appendChild(optgroup);
+              });
+            }
+          }
+          document.getElementById('modelCustom')?.addEventListener('input', updateHiddenModel);
+
+          // ==================== FORM SUBMIT ====================
+          document.getElementById('requestForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            updateHiddenModel();
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.classList.add('btn-loading'); btn.disabled = true;
+            const formData = {
+              brand: document.getElementById('brand').value,
+              model: document.getElementById('model').value,
+              device_type: document.getElementById('deviceType').value,
+              issue_type: document.getElementById('issue_type').value,
+              description: document.getElementById('description').value,
+              latitude: document.getElementById('latitude').value,
+              longitude: document.getElementById('longitude').value,
+              radius: document.getElementById('radius').value,
+              imageFile: document.getElementById('image').files[0]
+            };
+            const success = await submitUserRequest(formData);
+            btn.classList.remove('btn-loading'); btn.disabled = false;
+            if (success) {
+              e.target.reset();
+              clearImage();
+              showTab('myRequests', document.querySelector('[onclick*="myRequests"]'));
+            }
+          });
+
+          // ==================== MY REQUESTS ====================
+          async function loadMyRequests() {
+            const requests = await loadUserRequests();
+            const container = document.getElementById('requestsList');
+            if (!requests.length) {
+              container.innerHTML = `
+        <div class="empty-state">
+          <svg width="120" height="120" viewBox="0 0 120 120" fill="none">
+            <circle cx="60" cy="60" r="58" fill="#f0fdfa" stroke="#ccfbf1" stroke-width="2"/>
+            <!-- Technician with magnifying glass -->
+            <circle cx="52" cy="38" r="12" fill="#fbbf24"/>
+            <rect x="40" y="52" width="24" height="28" rx="8" fill="#0d9488"/>
+            <rect x="28" y="58" width="12" height="20" rx="6" fill="#0d9488"/>
+            <rect x="64" y="58" width="12" height="20" rx="6" fill="#0d9488"/>
+            <!-- Magnifying glass -->
+            <circle cx="78" cy="62" r="14" stroke="#2dd4bf" stroke-width="3" fill="rgba(45,212,191,0.1)"/>
+            <path d="M88 72 L96 80" stroke="#0d9488" stroke-width="3.5" stroke-linecap="round"/>
+            <!-- Small phone on floor -->
+            <rect x="32" y="82" width="14" height="22" rx="4" fill="#1e293b"/>
+            <rect x="34" y="86" width="10" height="14" rx="2" fill="rgba(45,212,191,0.3)"/>
+            <!-- Stars/sparkles -->
+            <circle cx="95" cy="35" r="2.5" fill="#f97316" opacity="0.6"/>
+            <circle cx="25" cy="55" r="2" fill="#14b8a6" opacity="0.5"/>
+            <circle cx="100" cy="55" r="3" fill="#14b8a6" opacity="0.4"/>
+          </svg>
+          <div class="empty-title">No requests yet</div>
+          <div class="empty-desc">Submit your first repair request and shops near you will start sending quotes!</div>
+          <button class="btn btn-primary btn-sm" onclick="showTab('newRequest', document.querySelector('[onclick*=newRequest]'))">
+            + New Request
+          </button>
+        </div>`;
+              return;
+            }
+            container.innerHTML = requests.map(r => {
+              let imageUrl = null;
+              if (r.image) imageUrl = r.image.startsWith('http') ? r.image : `${API_BASE.replace('/api', '')}/uploads/${r.image}`;
+              const deviceIcon = r.device_type === 'Laptop' ? '💻' : (r.device_type === 'Tablet' ? '📟' : '📱');
+              const statusColor = { pending: 'badge-slate', accepted: 'badge-teal', in_progress: 'badge-orange', completed: 'badge-green', cancelled: 'badge-red' }[r.status] || 'badge-slate';
+              return `
+        <div class="request-card mb-3">
+          <div style="display:flex; gap:1rem; align-items:flex-start;">
+            ${imageUrl ? `<div style="cursor:pointer;flex-shrink:0;" onclick="openLightbox('${imageUrl}')">
+              <img src="${imageUrl}" style="width:76px;height:76px;object-fit:cover;border-radius:12px;border:2px solid var(--slate-100);transition:transform .2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            </div>` : ''}
+            <div style="flex:1; min-width:0;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:.5rem; margin-bottom:.35rem;">
+                <h4 style="font-weight:700; font-size:.95rem;">${deviceIcon} ${r.brand} ${r.model}</h4>
+                <span class="badge ${statusColor}">${r.status.replace('_', ' ')}</span>
+              </div>
+              <p style="font-size:.8rem; color:var(--slate-400); margin-bottom:.4rem;">${r.device_type || 'Phone'} · ${r.issue_type}</p>
+              <p style="font-size:.85rem; color:var(--slate-600); margin-bottom:.75rem; line-height:1.5;">${r.description}</p>
+              <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
+                <button class="btn btn-sm btn-secondary" onclick="selectRequestAndViewQuotes(${r.id})">
+                  💬 Quotes <span style="background:var(--teal-500);color:white;border-radius:99px;padding:0 .45rem;font-size:.7rem;margin-left:.2rem;">${r.response_count || 0}</span>
+                </button>
+                ${(r.status === 'accepted' || r.status === 'in_progress') ? `<button class="btn btn-sm btn-outline" onclick="openChat(${r.id}, ${r.accepted_shop_id})">💬 Chat</button>` : ''}
+                ${r.status === 'completed' && !r.reviewed ? `<button class="btn btn-sm btn-primary" onclick="openReviewModal(${r.id})">⭐ Leave Review</button>` : ''}
+              </div>
+            </div>
+          </div>
+        </div>`;
+            }).join('');
+          }
+
+          window.selectRequestAndViewQuotes = (requestId) => {
+            currentRequestId = requestId;
+            showTab('quotes', document.querySelector('[onclick*="quotes"]'));
+            loadQuotesForCurrentRequest();
+          };
+
+          // ==================== QUOTES ====================
+          async function loadQuotesForCurrentRequest() {
+            if (!currentRequestId) {
+              document.getElementById('quotesList').innerHTML = `
+        <div class="empty-state">
+          <svg width="100" height="100" viewBox="0 0 100 100" fill="none">
+            <circle cx="50" cy="50" r="48" fill="#eff6ff" stroke="#dbeafe" stroke-width="2"/>
+            <path d="M30 35h40M30 50h30M30 65h20" stroke="#93c5fd" stroke-width="3" stroke-linecap="round"/>
+            <circle cx="70" cy="65" r="10" fill="#3b82f6" opacity="0.2" stroke="#3b82f6" stroke-width="2"/>
+            <text x="70" y="69" text-anchor="middle" fill="#3b82f6" font-size="10">?</text>
+          </svg>
+          <div class="empty-title">Select a request first</div>
+          <div class="empty-desc">Go to "My Requests" and tap on "Quotes" for a request to see shop offers.</div>
+        </div>`;
+              return;
+            }
+            const quotes = await loadQuotesForRequest(currentRequestId);
+            const container = document.getElementById('quotesList');
+            if (!quotes.length) {
+              container.innerHTML = `
+        <div class="empty-state">
+          <svg width="100" height="100" viewBox="0 0 100 100" fill="none">
+            <circle cx="50" cy="50" r="48" fill="#f0fdfa" stroke="#ccfbf1" stroke-width="2"/>
+            <path d="M25 55 Q35 35 50 38 Q65 35 75 55" stroke="#2dd4bf" stroke-width="2.5" fill="none" stroke-dasharray="5,4"/>
+            <circle cx="50" cy="58" r="8" fill="#14b8a6" opacity="0.3"/>
+            <text x="50" y="62" text-anchor="middle" fill="#0d9488" font-size="10">⏳</text>
+          </svg>
+          <div class="empty-title">Waiting for quotes...</div>
+          <div class="empty-desc">Shops near you will see your request and send their best price. Check back soon!</div>
+        </div>`;
+              return;
+            }
+            let requestStatus = 'pending', acceptedShopId = null;
+            try {
+              const reqData = await apiRequest(`/requests/${currentRequestId}`);
+              if (reqData.success) { requestStatus = reqData.request.status; acceptedShopId = reqData.request.accepted_shop_id; }
+            } catch (e) { }
+            container.innerHTML = quotes.map(q => {
+              const isAccepted = requestStatus !== 'pending' && requestStatus !== 'cancelled' && acceptedShopId === q.shop_id;
+              return `
+        <div class="request-card mb-3" style="${isAccepted ? 'border-color:var(--teal-200); background:linear-gradient(135deg,var(--teal-50),white);' : ''}">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:.6rem;">
+            <div>
+              <h4 style="font-weight:700;">${q.shop_name}</h4>
+              ${q.shop_avg_rating ? `<div style="font-size:.78rem; color:var(--slate-400);">⭐ ${parseFloat(q.shop_avg_rating).toFixed(1)}</div>` : ''}
+            </div>
+            <div class="price-tag">₹${q.price}</div>
+          </div>
+          <p style="font-size:.85rem; color:var(--slate-500); margin-bottom:.8rem;">${q.message || 'No additional message'}</p>
+          ${!isAccepted && requestStatus === 'pending' ? `
+            <button class="btn btn-primary btn-sm" onclick="acceptQuoteAndRefresh(${currentRequestId}, ${q.shop_id})">
+              ✓ Accept This Quote
+            </button>` : ''}
+          ${isAccepted ? `
+            <div style="display:flex; align-items:center; gap:.6rem; flex-wrap:wrap;">
+              <span class="badge badge-teal">✅ Accepted</span>
+              ${q.shop_phone ? `<span style="font-size:.82rem; background:var(--teal-50); border:1px solid var(--teal-200); color:var(--teal-700); padding:.3rem .8rem; border-radius:8px;">📞 ${q.shop_phone}</span>` : ''}
+            </div>` : ''}
+        </div>`;
+            }).join('');
+          }
+
+          window.acceptQuoteAndRefresh = async (requestId, shopId) => {
+            if (await acceptQuote(requestId, shopId)) loadQuotesForCurrentRequest();
+          };
+
+          // ==================== CHAT ====================
+          window.openChat = async (requestId, shopId) => {
+            chatRequestId = requestId; chatReceiverId = shopId;
+            document.getElementById('chatModal').style.display = 'flex';
+            await loadChatMessages();
+          };
+          window.closeChat = () => document.getElementById('chatModal').style.display = 'none';
+          async function loadChatMessages() {
+            const data = await apiRequest(`/messages/request/${chatRequestId}`);
+            const container = document.getElementById('chatMessages');
+            if (!data.success) return;
+            if (!data.messages.length) {
+              container.innerHTML = '<div style="text-align:center;color:var(--slate-400);font-size:.83rem;padding:2rem;">No messages yet. Say hello! 👋</div>';
+              return;
+            }
+            container.innerHTML = data.messages.map(m => `
+      <div class="chat-bubble ${m.sender_id === user.id ? 'sent' : 'received'}">${m.body}</div>
+      <div style="font-size:.7rem; color:var(--slate-300); text-align:${m.sender_id === user.id ? 'right' : 'left'}; margin-bottom:.4rem; margin-${m.sender_id === user.id ? 'right' : 'left'}:.5rem;">${m.sender_name}</div>`).join('');
+            container.scrollTop = container.scrollHeight;
+          }
+          window.sendChatMessage = async () => {
+            const input = document.getElementById('chatInput');
+            const body = input.value.trim();
+            if (!body) return;
+            await apiRequest('/messages', 'POST', { request_id: chatRequestId, receiver_id: chatReceiverId, body });
+            input.value = '';
+            await loadChatMessages();
+          };
+
+          // ==================== REVIEW ====================
+          window.setRating = (val) => {
+            selectedRating = val;
+            document.getElementById('reviewRating').value = val;
+            document.querySelectorAll('.star-btn').forEach((btn, i) => {
+              btn.textContent = i < val ? '★' : '☆';
+              btn.style.color = i < val ? '#f97316' : '#cbd5e1';
+              btn.style.transform = i < val ? 'scale(1.1)' : 'scale(1)';
+            });
+          };
+          setRating(5);
+
+          window.openReviewModal = (requestId) => {
+            document.getElementById('reviewRequestId').value = requestId;
+            document.getElementById('reviewModal').style.display = 'flex';
+          };
+          window.closeReviewModal = () => document.getElementById('reviewModal').style.display = 'none';
+          window.submitReview = async () => {
+            const requestId = document.getElementById('reviewRequestId').value;
+            const rating = document.getElementById('reviewRating').value;
+            const comment = document.getElementById('reviewComment').value;
+            const res = await apiRequest('/reviews', 'POST', { request_id: requestId, rating, comment });
+            if (res.success) { showToast('Review submitted! Thanks 🙏', 'success'); closeReviewModal(); loadMyRequests(); }
+          };
+
+          // ==================== SHOP MAP & SEARCH ====================
+          let shopsMap = null;
+          let shopsMarkers = [];
+
+          // Initialize map when the tab is first shown
+          function initShopsMap() {
+            if (shopsMap) return; // already initialized
+
+            const mapContainer = document.getElementById('shopsMap');
+            if (!mapContainer) return;
+
+            // Default center (India) – will be updated when user location is obtained
+            shopsMap = L.map('shopsMap').setView([20.5937, 78.9629], 5);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(shopsMap);
+          }
+
+          // Load nearby shops and display on map
+          async function loadNearbyShopsOnMap() {
+            initShopsMap();
+
+            let userLat, userLng;
+            try {
+              const pos = await getCurrentPosition();
+              userLat = pos.lat;
+              userLng = pos.lng;
+
+              // Center map on user's location
+              shopsMap.setView([userLat, userLng], 13);
+
+              // Add a marker for the user's location
+              L.marker([userLat, userLng], {
+                icon: L.divIcon({
+                  className: 'user-location-marker',
+                  html: '<div style="background: #14b8a6; width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px #14b8a6;"></div>',
+                  iconSize: [20, 20],
+                  iconAnchor: [10, 10]
+                })
+              }).addTo(shopsMap).bindPopup('<b>Your Location</b>').openPopup();
+
+            } catch (e) {
+              showToast('Could not get your location. Showing all shops.', 'info');
+            }
+
+            // Fetch shops from API
+            let shops = [];
+            try {
+              const data = await apiRequest('/shops/search?limit=100');
+              if (data.success) shops = data.shops;
+            } catch (e) {
+              console.error('Failed to load shops', e);
+              showToast('Failed to load shops', 'error');
+              return;
+            }
+
+            // Clear existing markers
+            shopsMarkers.forEach(m => shopsMap.removeLayer(m));
+            shopsMarkers = [];
+
+            // Add markers for each shop
+            shops.forEach(shop => {
+              if (!shop.latitude || !shop.longitude) return;
+
+              const marker = L.marker([shop.latitude, shop.longitude], {
+                icon: L.divIcon({
+                  className: 'shop-marker',
+                  html: `<div style="background: #f97316; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 12px rgba(249,115,22,0.4); font-size: 16px;">🏪</div>`,
+                  iconSize: [38, 38],
+                  iconAnchor: [19, 19]
+                })
+              }).addTo(shopsMap);
+
+              // Calculate distance if user location available
+              let distanceText = '';
+              if (userLat && userLng) {
+                const dist = getDistanceFromLatLonInKm(userLat, userLng, shop.latitude, shop.longitude);
+                distanceText = `<br>📍 ${dist.toFixed(1)} km away`;
+              }
+
+              // Popup content
+              const popupContent = `
+      <div style="min-width: 200px;">
+        <h4 style="font-weight: 700; margin-bottom: 4px;">${shop.name}</h4>
+        <div style="font-size: 13px; color: #64748b;">
+          ${shop.avg_rating ? '⭐ ' + parseFloat(shop.avg_rating).toFixed(1) : 'No ratings yet'}
+          ${distanceText}
+        </div>
+        <p style="margin: 8px 0; font-size: 14px;">📞 ${shop.phone}</p>
+        <button onclick="viewShopDetails(${shop.id})" style="background: #14b8a6; color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; width: 100%;">
+          View Details & Request Quote
+        </button>
+      </div>
+    `;
+
+              marker.bindPopup(popupContent);
+              shopsMarkers.push(marker);
+            });
+
+            // Also render the list view
+            renderShopList(shops);
+          }
+
+          // Helper: Distance calculation (Haversine)
+          function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = deg2rad(lat2 - lat1);
+            const dLon = deg2rad(lon2 - lon1);
+            const a =
+              Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+          }
+          function deg2rad(deg) { return deg * (Math.PI / 180); }
+
+          // Render the list view below the map
+          function renderShopList(shops) {
+            const container = document.getElementById('shopSearchResults');
+            if (!shops.length) {
+              container.innerHTML = '<div class="empty-state" style="padding:1rem;">No shops found</div>';
+              return;
+            }
+            container.innerHTML = shops.map(s => `
+    <div class="request-card" style="padding: 0.75rem 1rem; cursor: pointer;" onclick="focusShopOnMap(${s.id}, ${s.latitude}, ${s.longitude})">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <h4 style="font-weight:700; font-size:0.95rem;">${s.name}</h4>
+          <p style="font-size:0.8rem; color:var(--slate-400);">📞 ${s.phone}</p>
+        </div>
+        <div style="text-align:right;">
+          ${s.avg_rating ? `<div style="font-size:0.85rem; color:var(--orange-500);">⭐ ${parseFloat(s.avg_rating).toFixed(1)}</div>` : '<div style="font-size:0.75rem;color:var(--slate-300);">No reviews</div>'}
+          ${s.distance ? `<div style="font-size:0.75rem; color:var(--slate-400);">📍 ${s.distance.toFixed(1)} km</div>` : ''}
+        </div>
+      </div>
+    </div>
+  `).join('');
+          }
+
+          // When user clicks a shop in the list, pan the map to that marker and open popup
+          window.focusShopOnMap = (shopId, lat, lng) => {
+            if (!shopsMap) return;
+            shopsMap.setView([lat, lng], 15);
+            // Find the corresponding marker and open its popup
+            shopsMarkers.forEach(marker => {
+              const markerLatLng = marker.getLatLng();
+              if (markerLatLng.lat === lat && markerLatLng.lng === lng) {
+                marker.openPopup();
+              }
+            });
+          };
+
+          // View shop details – can open a modal or redirect to a dedicated page
+          window.viewShopDetails = (shopId) => {
+            // For now, just show a toast with instructions
+            // You can later implement a modal with full shop profile and "Request Quote" button
+            showToast('Select a request first or create a new one to get quotes from this shop.', 'info');
+            // Alternatively, pre-fill a new request with this shop selected? That's a future enhancement.
+          };
+
+          // Update the existing searchShops function to use map and list
+          window.searchShops = async () => {
+            const q = document.getElementById('shopSearchInput').value;
+            if (!q.trim()) {
+              loadNearbyShopsOnMap();
+              return;
+            }
+
+            let shops = [];
+            try {
+              const data = await apiRequest(`/shops/search?q=${encodeURIComponent(q)}`);
+              if (data.success) shops = data.shops;
+            } catch (e) {
+              showToast('Search failed', 'error');
+              return;
+            }
+
+            // Update markers on map (filter existing or re-add)
+            shopsMarkers.forEach(m => shopsMap.removeLayer(m));
+            shopsMarkers = [];
+
+            shops.forEach(shop => {
+              if (!shop.latitude || !shop.longitude) return;
+              const marker = L.marker([shop.latitude, shop.longitude], {
+                icon: L.divIcon({
+                  className: 'shop-marker',
+                  html: `<div style="background: #f97316; width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 12px rgba(249,115,22,0.4); font-size: 16px;">🏪</div>`,
+                  iconSize: [38, 38],
+                  iconAnchor: [19, 19]
+                })
+              }).addTo(shopsMap);
+
+              const popupContent = `
+      <div style="min-width: 200px;">
+        <h4 style="font-weight: 700; margin-bottom: 4px;">${shop.name}</h4>
+        <div style="font-size: 13px; color: #64748b;">
+          ${shop.avg_rating ? '⭐ ' + parseFloat(shop.avg_rating).toFixed(1) : 'No ratings yet'}
+        </div>
+        <p style="margin: 8px 0; font-size: 14px;">📞 ${shop.phone}</p>
+        <button onclick="viewShopDetails(${shop.id})" style="background: #14b8a6; color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; width: 100%;">
+          View Details & Request Quote
+        </button>
+      </div>
+    `;
+              marker.bindPopup(popupContent);
+              shopsMarkers.push(marker);
+            });
+
+            renderShopList(shops);
+
+            if (shops.length && shops[0].latitude) {
+              shopsMap.setView([shops[0].latitude, shops[0].longitude], 13);
+            }
+          };
+
+          // Modify the showTab function to initialize map when shops tab is opened
+          const originalShowTab = window.showTab;
+          window.showTab = (tabId, el) => {
+            originalShowTab(tabId, el);
+            if (tabId === 'shops') {
+              setTimeout(() => {
+                initShopsMap();
+                loadNearbyShopsOnMap();
+              }, 100); // slight delay to ensure DOM is ready
+            }
+          };
+          // ==================== ENHANCED LIGHTBOX ====================
+          window.openLightbox = (imageUrl) => {
+            const lb = document.getElementById('imageLightbox');
+            const img = document.getElementById('lightboxImage');
+            img.src = imageUrl;
+            lb.style.display = 'flex';
+            requestAnimationFrame(() => { lb.classList.add('lb-open'); });
+            document.body.style.overflow = 'hidden';
+          };
+          window.closeLightbox = () => {
+            const lb = document.getElementById('imageLightbox');
+            lb.classList.remove('lb-open');
+            setTimeout(() => { lb.style.display = 'none'; document.body.style.overflow = 'auto'; }, 350);
+          };
+          document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
+          window.toggleSidebar = () => {
+            const sb = document.getElementById('sidebar');
+            const ov = document.getElementById('sidebarOverlay');
+            sb.classList.toggle('open');
+            ov.classList.toggle('show');
+          };
+
+
+        </script>
+</body>
+
+</html>
