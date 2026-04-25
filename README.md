@@ -8,10 +8,7 @@ Users can post repair requests, receive competitive quotes from nearby shops, an
 
 ## 🌐 Live Demo
 
-* 🔗 Frontend: https://your-frontend-url.netlify.app
-* 🔗 Backend API: https://your-backend-url.onrender.com
-
-> ⚠️ Replace the above links after deployment
+* 🔗 Frontend: https://fixbit.netlify.app/
 
 ---
 

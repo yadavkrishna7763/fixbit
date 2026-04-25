@@ -1,5 +1,5 @@
 // ==================== CONFIG ====================
-const API_BASE = 'https://fixbit-api.onrender.com/api';
+const API_BASE = 'http://localhost:5050/api';
 let currentUser = null;
 
 // ==================== HELPERS ====================
