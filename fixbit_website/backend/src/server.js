@@ -1,43 +1,99 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const fs = require('fs');
-const rateLimit = require('express-rate-limit');
+require("dotenv").config();
 
+const express = require("express");
+const cors = require("cors");
+const helmet = require("helmet");
+
+// Import routes
+const authRoutes = require("./routes/auth");
+const userRoutes = require("./routes/users");
+const shopRoutes = require("./routes/shops");
+const requestRoutes = require("./routes/requests");
+const responseRoutes = require("./routes/responses");
+const reviewRoutes = require("./routes/reviews");
+const messageRoutes = require("./routes/messages");
+const adminRoutes = require("./routes/admin");
+
+// Initialize app
 const app = express();
-const PORT = process.env.PORT || 5050;
 
-// Middleware
-app.use(cors({
-  origin: 'https://fixbit.netlify.app',
-  methods: ['GET','POST','PUT','DELETE'],
-  credentials: true
-}));
+// ===============================
+// 🔐 MIDDLEWARE
+// ===============================
+
+// Security headers
+app.use(helmet());
+
+// Body parser
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Ensure uploads folder exists
-const uploadDir = path.join(__dirname, 'uploads');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+// ===============================
+// 🌐 CORS CONFIG (FIXED)
+// ===============================
 
-// Rate limiting
-app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 200 }));
+const allowedOrigins = [
+  "http://127.0.0.1:5500",
+  "http://localhost:5500",
+  "http://localhost:3000",
+  process.env.FRONTEND_URL // production frontend
+];
 
-// Routes
-app.use('/api/auth', require('./routes/auth'));
-app.use('/api/requests', require('./routes/requests'));
-app.use('/api/responses', require('./routes/responses'));
-app.use('/api/shops', require('./routes/shops'));
-app.use('/api/reviews', require('./routes/reviews'));
-app.use('/api/messages', require('./routes/messages'));
-app.use('/api/admin', require('./routes/admin'));
-app.use('/api/users', require('./routes/users'));
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // allow requests with no origin (like Postman)
+      if (!origin) return callback(null, true);
 
-// Global error handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ success: false, message: 'Internal server error' });
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      } else {
+        return callback(new Error("CORS not allowed: " + origin));
+      }
+    },
+    credentials: true
+  })
+);
+
+// ===============================
+// 📌 ROUTES
+// ===============================
+
+app.use("/api/auth", authRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/shops", shopRoutes);
+app.use("/api/requests", requestRoutes);
+app.use("/api/responses", responseRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/messages", messageRoutes);
+app.use("/api/admin", adminRoutes);
+
+// ===============================
+// 🏠 ROOT ROUTE
+// ===============================
+
+app.get("/", (req, res) => {
+  res.send("FixBit API is running...");
 });
 
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// ===============================
+// ❌ GLOBAL ERROR HANDLER
+// ===============================
+
+app.use((err, req, res, next) => {
+  console.error("❌ Error:", err.message);
+
+  res.status(500).json({
+    success: false,
+    message: err.message || "Internal Server Error"
+  });
+});
+
+// ===============================
+// 🚀 START SERVER
+// ===============================
+
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
