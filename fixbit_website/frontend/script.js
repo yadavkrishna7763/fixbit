@@ -177,7 +177,7 @@ async function login(email, password) {
     showToast('Login successful!', 'success');
     
     // Admin check – redirect to admin page if admin email
-    const adminEmails = ['admin@fixbit.com', 'admin@gmail.com', 'krishnayadav7763@gmail.com'];
+    const adminEmails = ['admin@fixbit.com', 'admin@gmail.com'];
     if (adminEmails.includes(data.user.email)) {
       setTimeout(() => {
         window.location.href = 'admin.html';

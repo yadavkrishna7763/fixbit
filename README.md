@@ -55,7 +55,7 @@ Users can post repair requests, receive competitive quotes from nearby shops, an
 | Backend  | Node.js, Express.js                 |
 | Database | MySQL                               |
 | Auth     | JWT, bcrypt                         |
-| Storage  | Cloudinary                          |
+| Storage  | Local uploads directory             |
 | Maps     | Leaflet.js                          |
 | Hosting  | Netlify, Render                     |
 
@@ -65,25 +65,29 @@ Users can post repair requests, receive competitive quotes from nearby shops, an
 
 ```
 fixbit/
-├── frontend/
-│   ├── index.html
-│   ├── login.html
-│   ├── user-dashboard.html
-│   ├── shop-dashboard.html
-│   ├── admin.html
-│   ├── style.css
-│   └── script.js
-│
-├── backend/
-│   ├── src/
-│   ├── routes/
-│   ├── middleware/
-│   └── utils/
-│
-├── database/
-│   ├── schema.sql
-│   └── sample_shops.sql
-│
+├── fixbit_website/
+│   ├── frontend/
+│   │   ├── index.html
+│   │   ├── login.html
+│   │   ├── user-dashboard.html
+│   │   ├── shop-dashboard.html
+│   │   ├── admin.html
+│   │   ├── config.js
+│   │   ├── style.css
+│   │   └── script.js
+│   ├── backend/
+│   │   ├── .env.example
+│   │   ├── src/
+│   │   │   ├── app.js
+│   │   │   ├── server.js
+│   │   │   ├── controllers/
+│   │   │   ├── routes/
+│   │   │   ├── models/
+│   │   │   ├── middleware/
+│   │   │   └── utils/
+│   │   └── uploads/
+│   └── database/
+│       └── schema.sql
 └── README.md
 ```
 
@@ -95,7 +99,7 @@ fixbit/
 
 ```
 git clone https://github.com/your-username/fixbit.git
-cd fixbit
+cd fixbit/fixbit_website
 ```
 
 ---
@@ -104,7 +108,6 @@ cd fixbit
 
 ```
 mysql -u root -p < database/schema.sql
-mysql -u root -p fixbit < database/sample_shops.sql
 ```
 
 ---
@@ -114,21 +117,22 @@ mysql -u root -p fixbit < database/sample_shops.sql
 ```
 cd backend
 npm install
+cp .env.example .env
 ```
 
 Create `.env` file:
 
 ```
 PORT=5050
+NODE_ENV=development
+DB_URL=
 DB_HOST=localhost
 DB_USER=root
 DB_PASSWORD=your_password
 DB_NAME=fixbit
 JWT_SECRET=your_secret
-
-CLOUDINARY_CLOUD_NAME=your_cloud
-CLOUDINARY_API_KEY=your_key
-CLOUDINARY_API_SECRET=your_secret
+FRONTEND_URL=http://localhost:5500
+ADMIN_EMAILS=admin@fixbit.com
 ```
 
 Run backend:
@@ -147,6 +151,8 @@ npx serve
 ```
 
 OR open `index.html` directly in browser
+
+For production, set `window.FIXBIT_CONFIG.API_BASE_URL` in `frontend/config.js` to your deployed backend URL, for example `https://your-api.example.com`.
 
 ---
 
@@ -170,7 +176,10 @@ OR open `index.html` directly in browser
 | POST   | /api/requests      | Create repair request |
 | GET    | /api/requests/my   | Get user requests     |
 | POST   | /api/responses     | Send quote            |
-| POST   | /api/messages      | Chat system           |
+| GET    | /api/responses/request/:id | Get quotes    |
+| POST   | /api/chat          | Send chat message     |
+| GET    | /api/chat/request/:id | Load conversation   |
+| GET    | /api/admin/users   | Admin user list       |
 
 ---
 
@@ -181,7 +190,7 @@ OR open `index.html` directly in browser
 | Frontend | Netlify    |
 | Backend  | Render     |
 | Database | TiDB Cloud |
-| Storage  | Cloudinary |
+| Storage  | Persistent disk or object storage |
 
 ---
 
