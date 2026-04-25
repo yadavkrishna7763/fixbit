@@ -67,9 +67,10 @@
 
 <div class="toast-container" id="toastContainer"></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="config.js"></script>
 <script src="script.js"></script>
 <script>
-  let map, marker;
+  let map, marker, locationSelected = false;
 
   function initMap(lat = 20.5937, lng = 78.9629) { // Default: India center
     if (map) map.remove();
@@ -79,18 +80,18 @@
     }).addTo(map);
 
     marker = L.marker([lat, lng], { draggable: true }).addTo(map);
-    marker.on('dragend', updateCoords);
+    marker.on('dragend', () => updateCoords(true));
     map.on('click', (e) => {
       marker.setLatLng(e.latlng);
-      updateCoords();
+      updateCoords(true);
     });
-    updateCoords();
   }
 
-  function updateCoords() {
+  function updateCoords(selected = true) {
     const pos = marker.getLatLng();
     document.getElementById('latitude').value = pos.lat;
     document.getElementById('longitude').value = pos.lng;
+    locationSelected = selected;
     document.getElementById('locationInfo').style.display = 'block';
   }
 
@@ -99,7 +100,7 @@
       const pos = await getCurrentPosition();
       map.setView([pos.lat, pos.lng], 13);
       marker.setLatLng([pos.lat, pos.lng]);
-      updateCoords();
+      updateCoords(true);
     } catch (e) {
       showToast('Could not get live location', 'error');
     }
@@ -116,7 +117,7 @@
     const lat = document.getElementById('latitude').value;
     const lng = document.getElementById('longitude').value;
 
-    if (!lat || !lng) {
+    if (!locationSelected || !lat || !lng) {
       showToast('Please select shop location on map', 'error');
       return;
     }

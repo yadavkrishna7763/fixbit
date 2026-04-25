@@ -9,6 +9,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 
 <body>
@@ -25,8 +26,12 @@
         <button onclick="closeChat()" class="chat-close-btn">&times;</button>
       </div>
       <div id="chatMessages" class="chat-messages"></div>
+      <div id="typingIndicator" style="display:none; padding: 0.5rem 1rem; font-size: 0.8rem; color: var(--slate-400); font-style: italic;">
+        Someone is typing...
+      </div>
       <div class="chat-footer">
         <input id="chatInput" type="text" placeholder="Type a message..." class="chat-input"
+          oninput="handleTyping()"
           onkeydown="if(event.key==='Enter') sendChatMessage()" />
         <button onclick="sendChatMessage()" class="btn btn-primary btn-sm">Send →</button>
       </div>
@@ -96,7 +101,7 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 5v14M5 12h14" />
           </svg>
-          New Request
+          Post Repair Issue
         </button>
         <button class="nav-item" onclick="showTab('myRequests', this)">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -199,8 +204,8 @@
                 style="width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--teal-500),var(--teal-700));display:flex;align-items:center;justify-content:center;font-size:1.2rem;">
               </div>
               <div>
-                <h3 style="font-size:1.05rem; font-weight:700; color:var(--slate-800);">Submit Repair Request</h3>
-                <p style="font-size:.8rem; color:var(--slate-400);">Tell shops what needs fixing</p>
+                <h3 style="font-size:1.05rem; font-weight:700; color:var(--slate-800);">Post Repair Issue</h3>
+                <p style="font-size:.8rem; color:var(--slate-400);">Tell nearby shops what needs fixing</p>
               </div>
             </div>
             <form id="requestForm">
@@ -274,7 +279,7 @@
               <input type="hidden" id="longitude" />
               <input type="hidden" id="device_type_hidden" name="device_type" />
               <button type="submit" class="btn btn-primary btn-full btn-lg" style="margin-top:.5rem;">
-                Submit Request →
+                Get Quotes →
               </button>
             </form>
           </div>
@@ -292,7 +297,15 @@
         <!-- ====== QUOTES TAB ====== -->
         <div id="tab-quotes" style="display:none;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
-            <h3 style="font-size:1.05rem; font-weight:700; color:var(--slate-800);">Quotes Received</h3>
+            <h3 style="font-size:1.05rem; font-weight:700; color:var(--slate-800);">Quotes for this Request</h3>
+            <div style="display:flex; gap:.5rem;">
+              <select id="quotesSortSelect" class="form-select" style="font-size:.8rem; padding:.25rem .5rem;" onchange="renderQuotesList()">
+                <option value="price">Sort: Lowest Price</option>
+                <option value="rating">Sort: Highest Rating</option>
+                <option value="distance">Sort: Nearest</option>
+              </select>
+              <button onclick="loadQuotesForCurrentRequest()" class="btn btn-secondary btn-sm">🔄 Refresh</button>
+            </div>
           </div>
           <div id="quotesList"></div>
         </div>
@@ -322,6 +335,7 @@
         </div>
 
         <div class="toast-container" id="toastContainer"></div>
+        <script src="config.js"></script>
         <script src="script.js"></script>
         <script>
           // ==================== PROFILE MANAGEMENT ====================
@@ -338,7 +352,7 @@
 
                 const img = document.getElementById('profileImagePreview');
                 if (p.profile_image) {
-                  img.src = p.profile_image.startsWith('http') ? p.profile_image : API_BASE.replace('/api', '') + p.profile_image;
+                  img.src = assetUrl(p.profile_image);
                 } else {
                   img.src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(p.name || 'User') + '&background=14b8a6&color=fff';
                 }
@@ -364,7 +378,7 @@
               });
               const data = await res.json();
               if (data.success) {
-                document.getElementById('profileImagePreview').src = API_BASE.replace('/api', '') + data.imageUrl + '?t=' + Date.now();
+                document.getElementById('profileImagePreview').src = assetUrl(data.imageUrl) + '?t=' + Date.now();
                 showToast('Profile picture updated', 'success');
               } else {
                 showToast(data.message || 'Upload failed', 'error');
@@ -474,9 +488,11 @@
           let currentRequestId = null;
           let chatRequestId = null;
           let chatReceiverId = null;
+          let chatPollTimer = null;
+          let chatSending = false;
           let selectedRating = 5;
 
-          const user = checkAuth();
+          const user = requireRole('user');
           if (user) {
             document.getElementById('sidebarName').innerText = user.name || 'User';
             document.getElementById('sidebarInitial').innerText = (user.name || 'U')[0].toUpperCase();
@@ -623,6 +639,17 @@
             updateHiddenModel();
             const btn = e.target.querySelector('button[type="submit"]');
             btn.classList.add('btn-loading'); btn.disabled = true;
+            if (!document.getElementById('latitude').value || !document.getElementById('longitude').value) {
+              try {
+                const pos = await getCurrentPosition();
+                document.getElementById('latitude').value = pos.lat;
+                document.getElementById('longitude').value = pos.lng;
+              } catch (err) {
+                showToast('Please allow location access so shops near you can see the request.', 'error');
+                btn.classList.remove('btn-loading'); btn.disabled = false;
+                return;
+              }
+            }
             const formData = {
               brand: document.getElementById('brand').value,
               model: document.getElementById('model').value,
@@ -645,8 +672,15 @@
 
           // ==================== MY REQUESTS ====================
           async function loadMyRequests() {
-            const requests = await loadUserRequests();
             const container = document.getElementById('requestsList');
+            container.innerHTML = '<div class="empty-state" style="padding:2rem;">Loading your requests...</div>';
+            let requests = [];
+            try {
+              requests = await loadUserRequests();
+            } catch (e) {
+              container.innerHTML = '<div class="empty-state" style="padding:2rem;">Could not load requests. Please try again.</div>';
+              return;
+            }
             if (!requests.length) {
               container.innerHTML = `
         <div class="empty-state">
@@ -671,14 +705,14 @@
           <div class="empty-title">No requests yet</div>
           <div class="empty-desc">Submit your first repair request and shops near you will start sending quotes!</div>
           <button class="btn btn-primary btn-sm" onclick="showTab('newRequest', document.querySelector('[onclick*=newRequest]'))">
-            + New Request
+            Post Repair Issue
           </button>
         </div>`;
               return;
             }
             container.innerHTML = requests.map(r => {
               let imageUrl = null;
-              if (r.image) imageUrl = r.image.startsWith('http') ? r.image : `${API_BASE.replace('/api', '')}/uploads/${r.image}`;
+              if (r.image) imageUrl = assetUrl(r.image);
               const deviceIcon = r.device_type === 'Laptop' ? '💻' : (r.device_type === 'Tablet' ? '📟' : '📱');
               const statusColor = { pending: 'badge-slate', accepted: 'badge-teal', in_progress: 'badge-orange', completed: 'badge-green', cancelled: 'badge-red' }[r.status] || 'badge-slate';
               return `
@@ -689,11 +723,11 @@
             </div>` : ''}
             <div style="flex:1; min-width:0;">
               <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:.5rem; margin-bottom:.35rem;">
-                <h4 style="font-weight:700; font-size:.95rem;">${deviceIcon} ${r.brand} ${r.model}</h4>
-                <span class="badge ${statusColor}">${r.status.replace('_', ' ')}</span>
+                <h4 style="font-weight:700; font-size:.95rem;">${deviceIcon} ${escapeHTML(r.brand)} ${escapeHTML(r.model)}</h4>
+                <span class="badge ${statusColor}">${escapeHTML(String(r.status).replace('_', ' '))}</span>
               </div>
-              <p style="font-size:.8rem; color:var(--slate-400); margin-bottom:.4rem;">${r.device_type || 'Phone'} · ${r.issue_type}</p>
-              <p style="font-size:.85rem; color:var(--slate-600); margin-bottom:.75rem; line-height:1.5;">${r.description}</p>
+              <p style="font-size:.8rem; color:var(--slate-400); margin-bottom:.4rem;">${escapeHTML(r.device_type || 'Phone')} · ${escapeHTML(r.issue_type)}</p>
+              <p style="font-size:.85rem; color:var(--slate-600); margin-bottom:.75rem; line-height:1.5;">${escapeHTML(r.description)}</p>
               <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
                 <button class="btn btn-sm btn-secondary" onclick="selectRequestAndViewQuotes(${r.id})">
                   💬 Quotes <span style="background:var(--teal-500);color:white;border-radius:99px;padding:0 .45rem;font-size:.7rem;margin-left:.2rem;">${r.response_count || 0}</span>
@@ -729,8 +763,18 @@
         </div>`;
               return;
             }
-            const quotes = await loadQuotesForRequest(currentRequestId);
             const container = document.getElementById('quotesList');
+            container.innerHTML = '<div class="empty-state" style="padding:2rem;">Loading quotes...</div>';
+            let quotes = [];
+            let requestLat = null;
+            let requestLng = null;
+            try {
+              quotes = await loadQuotesForRequest(currentRequestId);
+              window.currentLoadedQuotes = quotes;
+            } catch (e) {
+              container.innerHTML = '<div class="empty-state" style="padding:2rem;">Could not load quotes. Please try again.</div>';
+              return;
+            }
             if (!quotes.length) {
               container.innerHTML = `
         <div class="empty-state">
@@ -748,31 +792,73 @@
             let requestStatus = 'pending', acceptedShopId = null;
             try {
               const reqData = await apiRequest(`/requests/${currentRequestId}`);
-              if (reqData.success) { requestStatus = reqData.request.status; acceptedShopId = reqData.request.accepted_shop_id; }
+              if (reqData.success) { 
+                requestStatus = reqData.request.status; 
+                acceptedShopId = reqData.request.accepted_shop_id;
+                requestLat = reqData.request.latitude;
+                requestLng = reqData.request.longitude;
+              }
             } catch (e) { }
-            container.innerHTML = quotes.map(q => {
-              const isAccepted = requestStatus !== 'pending' && requestStatus !== 'cancelled' && acceptedShopId === q.shop_id;
-              return `
-        <div class="request-card mb-3" style="${isAccepted ? 'border-color:var(--teal-200); background:linear-gradient(135deg,var(--teal-50),white);' : ''}">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:.6rem;">
-            <div>
-              <h4 style="font-weight:700;">${q.shop_name}</h4>
-              ${q.shop_avg_rating ? `<div style="font-size:.78rem; color:var(--slate-400);">⭐ ${parseFloat(q.shop_avg_rating).toFixed(1)}</div>` : ''}
+            window.renderQuotesList = () => {
+              const sortType = document.getElementById('quotesSortSelect')?.value || 'price';
+              
+              // Calculate distances if needed
+              if (requestLat && requestLng) {
+                quotes.forEach(q => {
+                  if (q.shop_latitude && q.shop_longitude && !q.distance) {
+                    q.distance = getDistanceFromLatLonInKm(requestLat, requestLng, q.shop_latitude, q.shop_longitude);
+                  }
+                });
+              }
+
+              // Sorting
+              let sortedQuotes = [...quotes];
+              if (sortType === 'price') {
+                sortedQuotes.sort((a, b) => Number(a.price) - Number(b.price));
+              } else if (sortType === 'rating') {
+                sortedQuotes.sort((a, b) => Number(b.shop_avg_rating || 0) - Number(a.shop_avg_rating || 0));
+              } else if (sortType === 'distance') {
+                sortedQuotes.sort((a, b) => {
+                  const distA = a.distance !== undefined ? a.distance : 9999;
+                  const distB = b.distance !== undefined ? b.distance : 9999;
+                  return distA - distB;
+                });
+              }
+
+              container.innerHTML = sortedQuotes.map(q => {
+                const isAccepted = requestStatus !== 'pending' && requestStatus !== 'cancelled' && Number(acceptedShopId) === Number(q.shop_id);
+                const distanceText = q.distance !== undefined ? `<span style="font-size:.78rem; color:var(--slate-400);"> • 📍 ${q.distance.toFixed(1)} km away</span>` : '';
+                return `
+          <div class="request-card mb-3" style="${isAccepted ? 'border-color:var(--teal-200); background:linear-gradient(135deg,var(--teal-50),white);' : ''}">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:.6rem;">
+              <div>
+                <h4 style="font-weight:700; display:flex; align-items:center; gap:.25rem;">
+                  ${escapeHTML(q.shop_name)}
+                  ${q.shop_is_verified ? '<span style="color:#14b8a6; font-size:.85rem;" title="Verified Shop">✅</span>' : ''}
+                </h4>
+                <div style="font-size:.78rem; color:var(--slate-400);">
+                  ${q.shop_avg_rating ? `⭐ ${parseFloat(q.shop_avg_rating).toFixed(1)}` : 'No ratings yet'} 
+                  • ${q.shop_completed_jobs || 0} jobs done
+                  ${distanceText}
+                </div>
+              </div>
+              <div class="price-tag">₹${q.price}</div>
             </div>
-            <div class="price-tag">₹${q.price}</div>
-          </div>
-          <p style="font-size:.85rem; color:var(--slate-500); margin-bottom:.8rem;">${q.message || 'No additional message'}</p>
-          ${!isAccepted && requestStatus === 'pending' ? `
-            <button class="btn btn-primary btn-sm" onclick="acceptQuoteAndRefresh(${currentRequestId}, ${q.shop_id})">
-              ✓ Accept This Quote
-            </button>` : ''}
-          ${isAccepted ? `
-            <div style="display:flex; align-items:center; gap:.6rem; flex-wrap:wrap;">
-              <span class="badge badge-teal">✅ Accepted</span>
-              ${q.shop_phone ? `<span style="font-size:.82rem; background:var(--teal-50); border:1px solid var(--teal-200); color:var(--teal-700); padding:.3rem .8rem; border-radius:8px;">📞 ${q.shop_phone}</span>` : ''}
-            </div>` : ''}
-        </div>`;
-            }).join('');
+            <p style="font-size:.85rem; color:var(--slate-500); margin-bottom:.8rem;">${escapeHTML(q.message || 'No additional message')}</p>
+            ${!isAccepted && requestStatus === 'pending' ? `
+              <button class="btn btn-primary btn-sm" onclick="acceptQuoteAndRefresh(${currentRequestId}, ${q.shop_id})">
+                ✓ Accept This Quote
+              </button>` : ''}
+            ${isAccepted ? `
+              <div style="display:flex; align-items:center; gap:.6rem; flex-wrap:wrap;">
+                <span class="badge badge-teal">✅ Accepted</span>
+                ${q.shop_phone ? `<span style="font-size:.82rem; background:var(--teal-50); border:1px solid var(--teal-200); color:var(--teal-700); padding:.3rem .8rem; border-radius:8px;">📞 ${q.shop_phone}</span>` : ''}
+                ${q.shop_phone ? `<a href="https://wa.me/${String(q.shop_phone).replace(/\D/g, '')}" target="_blank" style="font-size:.82rem; background:var(--green-50); border:1px solid var(--green-200); color:var(--green-700); padding:.3rem .8rem; border-radius:8px; text-decoration:none;">📱 WhatsApp</a>` : ''}
+              </div>` : ''}
+          </div>`;
+              }).join('');
+            };
+            renderQuotesList();
           }
 
           window.acceptQuoteAndRefresh = async (requestId, shopId) => {
@@ -783,29 +869,63 @@
           window.openChat = async (requestId, shopId) => {
             chatRequestId = requestId; chatReceiverId = shopId;
             document.getElementById('chatModal').style.display = 'flex';
+            if (socket) socket.emit('join_chat', chatRequestId);
             await loadChatMessages();
+            clearInterval(chatPollTimer);
+            chatPollTimer = setInterval(() => loadChatMessages(true), 5000);
           };
-          window.closeChat = () => document.getElementById('chatModal').style.display = 'none';
-          async function loadChatMessages() {
-            const data = await apiRequest(`/messages/request/${chatRequestId}`);
+          window.closeChat = () => {
+            document.getElementById('chatModal').style.display = 'none';
+            if (socket) socket.emit('leave_chat', chatRequestId);
+            clearInterval(chatPollTimer);
+          };
+          let typingTimeout;
+          window.handleTyping = () => {
+            if (socket) {
+              socket.emit('typing', { requestId: chatRequestId, userId: user.id, isTyping: true });
+              clearTimeout(typingTimeout);
+              typingTimeout = setTimeout(() => {
+                socket.emit('typing', { requestId: chatRequestId, userId: user.id, isTyping: false });
+              }, 1500);
+            }
+          };
+          async function loadChatMessages(silent = false) {
             const container = document.getElementById('chatMessages');
+            if (!silent) container.innerHTML = '<div style="text-align:center;color:var(--slate-400);font-size:.83rem;padding:2rem;">Loading messages...</div>';
+            let data;
+            try {
+              data = await apiRequest(`/chat/request/${chatRequestId}`);
+            } catch (e) {
+              if (!silent) container.innerHTML = '<div style="text-align:center;color:var(--slate-400);font-size:.83rem;padding:2rem;">Could not load messages.</div>';
+              return;
+            }
             if (!data.success) return;
+            if (data.receiverId) chatReceiverId = data.receiverId;
             if (!data.messages.length) {
               container.innerHTML = '<div style="text-align:center;color:var(--slate-400);font-size:.83rem;padding:2rem;">No messages yet. Say hello! 👋</div>';
               return;
             }
             container.innerHTML = data.messages.map(m => `
-      <div class="chat-bubble ${m.sender_id === user.id ? 'sent' : 'received'}">${m.body}</div>
-      <div style="font-size:.7rem; color:var(--slate-300); text-align:${m.sender_id === user.id ? 'right' : 'left'}; margin-bottom:.4rem; margin-${m.sender_id === user.id ? 'right' : 'left'}:.5rem;">${m.sender_name}</div>`).join('');
+      <div class="chat-bubble ${m.sender_id === user.id ? 'sent' : 'received'}">${escapeHTML(m.body)}</div>
+      <div style="font-size:.7rem; color:var(--slate-300); text-align:${m.sender_id === user.id ? 'right' : 'left'}; margin-bottom:.4rem; margin-${m.sender_id === user.id ? 'right' : 'left'}:.5rem;">${escapeHTML(m.sender_name)}</div>`).join('');
             container.scrollTop = container.scrollHeight;
+            markMessagesRead(chatRequestId).catch(() => {});
           }
           window.sendChatMessage = async () => {
             const input = document.getElementById('chatInput');
             const body = input.value.trim();
-            if (!body) return;
-            await apiRequest('/messages', 'POST', { request_id: chatRequestId, receiver_id: chatReceiverId, body });
-            input.value = '';
-            await loadChatMessages();
+            if (!body || chatSending) return;
+            chatSending = true;
+            input.disabled = true;
+            try {
+              await apiRequest('/chat', 'POST', { request_id: chatRequestId, receiver_id: chatReceiverId, body });
+              input.value = '';
+              await loadChatMessages(true);
+            } finally {
+              chatSending = false;
+              input.disabled = false;
+              input.focus();
+            }
           };
 
           // ==================== REVIEW ====================
@@ -885,7 +1005,6 @@
               const data = await apiRequest('/shops/search?limit=100');
               if (data.success) shops = data.shops;
             } catch (e) {
-              console.error('Failed to load shops', e);
               showToast('Failed to load shops', 'error');
               return;
             }
@@ -917,14 +1036,21 @@
               // Popup content
               const popupContent = `
       <div style="min-width: 200px;">
-        <h4 style="font-weight: 700; margin-bottom: 4px;">${shop.name}</h4>
-        <div style="font-size: 13px; color: #64748b;">
-          ${shop.avg_rating ? '⭐ ' + parseFloat(shop.avg_rating).toFixed(1) : 'No ratings yet'}
+        <h4 style="font-weight: 700; margin-bottom: 4px; display:flex; align-items:center; gap:0.3rem;">
+          ${shop.name}
+          ${shop.is_verified ? '<span style="color:#14b8a6; font-size:1rem;" title="Verified Shop">✅</span>' : ''}
+        </h4>
+        <div style="font-size: 13px; color: #64748b; margin-bottom: 4px;">
+          ${shop.avg_rating ? '⭐ ' + parseFloat(shop.avg_rating).toFixed(1) : 'No ratings'} 
+          • ${shop.completed_jobs || 0} jobs done
           ${distanceText}
         </div>
-        <p style="margin: 8px 0; font-size: 14px;">📞 ${shop.phone}</p>
-        <button onclick="viewShopDetails(${shop.id})" style="background: #14b8a6; color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; width: 100%;">
-          View Details & Request Quote
+        <div style="display:flex; gap:0.5rem; margin-top:10px;">
+          <a href="tel:${shop.phone}" class="btn btn-outline btn-sm" style="flex:1; text-align:center; padding:4px;">📞 Call</a>
+          <a href="https://wa.me/${String(shop.phone).replace(/\D/g, '')}" target="_blank" class="btn btn-outline btn-sm" style="flex:1; text-align:center; padding:4px; color:#16a34a; border-color:#16a34a;">📱 WA</a>
+        </div>
+        <button onclick="viewShopDetails(${shop.id})" style="background: #14b8a6; color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; width: 100%; margin-top:8px;">
+          Request Quote
         </button>
       </div>
     `;
@@ -962,8 +1088,11 @@
     <div class="request-card" style="padding: 0.75rem 1rem; cursor: pointer;" onclick="focusShopOnMap(${s.id}, ${s.latitude}, ${s.longitude})">
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <div>
-          <h4 style="font-weight:700; font-size:0.95rem;">${s.name}</h4>
-          <p style="font-size:0.8rem; color:var(--slate-400);">📞 ${s.phone}</p>
+          <h4 style="font-weight:700; font-size:0.95rem; display:flex; align-items:center; gap:0.25rem;">
+            ${s.name}
+            ${s.is_verified ? '<span style="color:#14b8a6; font-size:0.85rem;" title="Verified Shop">✅</span>' : ''}
+          </h4>
+          <p style="font-size:0.8rem; color:var(--slate-400);">📞 ${s.phone} • ${s.completed_jobs || 0} jobs done</p>
         </div>
         <div style="text-align:right;">
           ${s.avg_rating ? `<div style="font-size:0.85rem; color:var(--orange-500);">⭐ ${parseFloat(s.avg_rating).toFixed(1)}</div>` : '<div style="font-size:0.75rem;color:var(--slate-300);">No reviews</div>'}

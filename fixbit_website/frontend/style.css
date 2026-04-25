@@ -84,6 +84,13 @@ img {
   max-width: 100%;
 }
 
+button,
+input,
+select,
+textarea {
+  max-width: 100%;
+}
+
 /* ===================== ANIMATIONS ===================== */
 @keyframes fadeUp {
   from {
@@ -407,6 +414,7 @@ img {
   transition: all .22s cubic-bezier(0.4, 0, 0.2, 1);
   text-decoration: none;
   white-space: nowrap;
+  min-height: 40px;
   position: relative;
   overflow: hidden;
 }
@@ -673,6 +681,15 @@ img {
   transition: all .3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
+}
+
+.request-card h4,
+.request-card p,
+.card h3,
+.card p,
+.profile-title h3,
+.sidebar-user-info .name {
+  overflow-wrap: anywhere;
 }
 
 .request-card::before {
@@ -1060,6 +1077,7 @@ nav {
 .dash-content {
   padding: 2rem;
   flex: 1;
+  min-width: 0;
 }
 
 /* ===================== TAB BAR ===================== */
@@ -2135,6 +2153,13 @@ body.dark table tbody tr:hover td {
 
   .dash-topbar {
     padding: .9rem 1.25rem;
+    align-items: flex-start;
+    gap: .75rem;
+  }
+
+  .dash-topbar > div:last-child {
+    justify-content: flex-end;
+    flex-wrap: wrap;
   }
 
   .dash-content {
@@ -2184,6 +2209,44 @@ body.dark table tbody tr:hover td {
   .dash-content {
     padding: 1rem;
   }
+
+  .card,
+  .auth-card,
+  .request-card,
+  .profile-container {
+    border-radius: var(--radius-md);
+  }
+
+  .request-card {
+    padding: 1rem;
+  }
+
+  .request-card > div[style*="display:flex"] {
+    flex-direction: column;
+  }
+
+  .request-card img {
+    width: 100% !important;
+    height: auto !important;
+    max-height: 220px;
+  }
+
+  .btn {
+    white-space: normal;
+  }
+
+  .chat-modal-inner {
+    height: 82vh;
+    max-width: 100%;
+  }
+
+  .chat-footer {
+    align-items: stretch;
+  }
+
+  .chat-input {
+    min-width: 0;
+  }
 }
 
 @media (max-width: 480px) {
@@ -2193,6 +2256,50 @@ body.dark table tbody tr:hover td {
 
   .hero h1 {
     font-size: 2rem;
+  }
+
+  .auth-page {
+    padding: 1rem;
+    align-items: flex-start;
+  }
+
+  .auth-card {
+    padding: 1.25rem;
+  }
+
+  .dash-topbar {
+    padding: .85rem 1rem;
+  }
+
+  .dash-topbar h2 {
+    font-size: 1.05rem;
+  }
+
+  .dash-topbar .sub {
+    font-size: .75rem;
+  }
+
+  .dash-content {
+    padding: .85rem;
+  }
+
+  .price-tag {
+    font-size: 1.2rem;
+  }
+
+  .toast-container {
+    left: 1rem;
+    right: 1rem;
+    bottom: 1rem;
+  }
+
+  .toast {
+    min-width: 0;
+    max-width: none;
+  }
+
+  .chat-bubble {
+    max-width: 88%;
   }
 }
 

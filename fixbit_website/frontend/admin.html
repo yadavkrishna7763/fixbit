@@ -39,14 +39,15 @@
   </div>
 
   <div class="toast-container" id="toastContainer"></div>
+  <script src="config.js"></script>
   <script src="script.js"></script>
   <script>
     const user = checkAuth();
     if (!user) window.location.href = 'login.html';
     
-    const adminEmails = ['admin@fixbit.com', 'krishnayadav7763@gmail.com'];
+    const adminEmails = ['admin@fixbit.com', 'admin@gmail.com', 'krishnayadav7763@gmail.com'];
     if (!adminEmails.includes(user.email)) {
-      alert('Admin access only.');
+      showToast('Admin access only.', 'error');
       window.location.href = 'index.html';
     }
 
@@ -84,11 +85,11 @@
               ${data.users.map(u => `
                 <tr class="border-t dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50">
                   <td class="p-3">${u.id}</td>
-                  <td class="p-3 font-medium">${u.name || '—'}</td>
-                  <td class="p-3 text-sm">${u.email || '—'}</td>
-                  <td class="p-3">${u.phone || '—'}</td>
+                  <td class="p-3 font-medium">${escapeHTML(u.name || '—')}</td>
+                  <td class="p-3 text-sm">${escapeHTML(u.email || '—')}</td>
+                  <td class="p-3">${escapeHTML(u.phone || '—')}</td>
                   <td class="p-3">
-                    <span class="badge ${u.role === 'shop' ? 'badge-orange' : 'badge-teal'}">${u.role}</span>
+                    <span class="badge ${u.role === 'shop' ? 'badge-orange' : 'badge-teal'}">${escapeHTML(u.role)}</span>
                   </td>
                   <td class="p-3">${u.avg_rating ? '⭐ ' + parseFloat(u.avg_rating).toFixed(1) : '—'}</td>
                   <td class="p-3">
@@ -139,11 +140,11 @@
               ${data.requests.map(r => `
                 <tr class="border-t dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700/50">
                   <td class="p-3">${r.id}</td>
-                  <td class="p-3">${r.user_name || '—'}</td>
-                  <td class="p-3">${r.device_type || 'Phone'} ${r.brand} ${r.model}</td>
-                  <td class="p-3">${r.issue_type}</td>
-                  <td class="p-3"><span class="badge badge-teal">${r.status}</span></td>
-                  <td class="p-3">${r.shop_name || '—'}</td>
+                  <td class="p-3">${escapeHTML(r.user_name || '—')}</td>
+                  <td class="p-3">${escapeHTML(r.device_type || 'Phone')} ${escapeHTML(r.brand)} ${escapeHTML(r.model)}</td>
+                  <td class="p-3">${escapeHTML(r.issue_type)}</td>
+                  <td class="p-3"><span class="badge badge-teal">${escapeHTML(r.status)}</span></td>
+                  <td class="p-3">${escapeHTML(r.shop_name || '—')}</td>
                   <td class="p-3">${new Date(r.created_at).toLocaleDateString()}</td>
                   <td class="p-3">
                     <button onclick="deleteRequest(${r.id})" class="btn btn-sm btn-outline text-red-600">Delete</button>
