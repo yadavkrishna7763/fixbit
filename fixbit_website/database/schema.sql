@@ -25,6 +25,9 @@ CREATE TABLE users (
   address       TEXT DEFAULT NULL,              -- shop address
   working_hours VARCHAR(100) DEFAULT NULL,      -- e.g., "Mon-Sat 9AM-8PM"
   description   TEXT DEFAULT NULL,              -- shop description
+  is_verified   BOOLEAN DEFAULT FALSE,          -- verified shop badge
+  completed_jobs INT DEFAULT 0,                 -- number of completed jobs
+  last_active_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, -- for recently active status
   created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY uniq_phone (phone),
   UNIQUE KEY uniq_email (email)
@@ -131,7 +134,7 @@ USE fixbit;
 SET @default_password = '$2b$10$ZQz5QZ5QZ5QZ5QZ5QZ5QZueWqL5QZ5QZ5QZ5QZ5QZ5QZ5QZ5QZ5Q';
 SET @base_lat = 28.5495;
 SET @base_lng = 77.2506;
-DELETE FROM users WHERE phone IN ('8744841920','9576152569','8799705881','9958811539','8537858585','8285744902');
+DELETE FROM users WHERE phone IN ('8744841920','9576152569','8799705881','9958811539','8537858585','8285744902', '7706949324');
 INSERT INTO users (name, email, phone, password, role, latitude, longitude, banned, created_at) VALUES ('Shri Kalka Mobile Repair', NULL, '8744841920', @default_password, 'shop', @base_lat, @base_lng, 0, NOW());
 INSERT INTO users (name, email, phone, password, role, latitude, longitude, banned, created_at) VALUES ('Expert Team', NULL, '9576152569', @default_password, 'shop', @base_lat, @base_lng + 0.001, 0, NOW());
 INSERT INTO users (name, email, phone, password, role, latitude, longitude, banned, created_at) VALUES ('BRC Computer', NULL, '8799705881', @default_password, 'shop', @base_lat + 0.001, @base_lng, 0, NOW());
