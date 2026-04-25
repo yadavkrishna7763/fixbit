@@ -34,7 +34,9 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
   }
 
   const { brand, model, device_type, issue_type, description, latitude, longitude, radius } = req.body;
-  const image = req.file ? req.file.filename : null;
+
+  // 🔥 CHANGE HERE (IMPORTANT)
+  const image = req.file ? req.file.path : null;
 
   if (!brand || !model || !device_type || !issue_type || !description || !latitude || !longitude) {
     return res.status(400).json({ success: false, message: 'Missing required fields' });
@@ -46,10 +48,12 @@ router.post('/', auth, upload.single('image'), async (req, res) => {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [req.user.id, brand, model, device_type, issue_type, description, image, latitude, longitude, radius || 10]
     );
+
     res.status(201).json({ success: true, requestId: result.insertId });
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false, message: 'Failed to create request' });
+    console.error("REQUEST CREATE ERROR:", err);
+    res.status(500).json({ success: false, message: err.message });
   }
 });
 
