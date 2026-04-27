@@ -83,14 +83,17 @@ async function createUser(user) {
 }
 
 async function updateProfile(userId, profile) {
+  const normalizedPhone = normalizePhoneNumber(profile.phone);
+  const normalizedEmail = normalizeEmailAddress(profile.email);
   await db.query(
     `UPDATE users
-     SET name = ?, email = ?, phone = ?, address = ?, working_hours = ?, description = ?
+     SET name = ?, email = ?, phone = ?, normalized_phone = ?, address = ?, working_hours = ?, description = ?
      WHERE id = ?`,
     [
       profile.name,
-      profile.email,
-      profile.phone,
+      normalizedEmail,
+      normalizedPhone || profile.phone,
+      normalizedPhone,
       profile.address,
       profile.working_hours,
       profile.description,

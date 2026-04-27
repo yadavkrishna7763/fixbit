@@ -3,6 +3,7 @@ require('dotenv').config();
 const http = require('http');
 const app = require('./app');
 const { initSocket } = require('./socket');
+const ensureAuthSchema = require('./utils/ensureAuthSchema');
 
 if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
   throw new Error('JWT_SECRET must be configured in production');
@@ -10,11 +11,20 @@ if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
 
 const PORT = process.env.PORT || 5050;
 
-const server = http.createServer(app);
+async function startServer() {
+  await ensureAuthSchema();
 
-// Initialize Socket.io
-initSocket(server);
+  const server = http.createServer(app);
 
-server.listen(PORT, () => {
-  console.log(`FixBit API & Socket running on port ${PORT}`);
+  // Initialize Socket.io after the database schema is ready.
+  initSocket(server);
+
+  server.listen(PORT, () => {
+    console.log(`FixBit API & Socket running on port ${PORT}`);
+  });
+}
+
+startServer().catch(error => {
+  console.error('Failed to start FixBit API', error);
+  process.exit(1);
 });
