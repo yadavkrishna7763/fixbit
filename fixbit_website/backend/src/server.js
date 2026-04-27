@@ -4,6 +4,7 @@ const http = require('http');
 const app = require('./app');
 const { initSocket } = require('./socket');
 const ensureAuthSchema = require('./utils/ensureAuthSchema');
+const ensureSeedShops = require('./utils/ensureSeedShops');
 
 if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
   throw new Error('JWT_SECRET must be configured in production');
@@ -13,6 +14,7 @@ const PORT = process.env.PORT || 5050;
 
 async function startServer() {
   await ensureAuthSchema();
+  await ensureSeedShops();
 
   const server = http.createServer(app);
 
