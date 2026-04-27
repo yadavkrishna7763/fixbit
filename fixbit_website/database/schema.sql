@@ -189,10 +189,6 @@ CREATE TABLE auth_otps (
   INDEX idx_auth_otps_expires (expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Create a default admin user (password placeholder, replace in production)
-INSERT INTO users (name, email, phone, normalized_phone, password, role, is_verified, email_verified_at, phone_verified_at)
-VALUES ('Admin', 'admin@fixbit.com', '+919999999999', '+919999999999', '$2b$10$abcdefghijklmnopqrstuvwxyz1234567890', 'admin', 1, NOW(), NOW())
-ON DUPLICATE KEY UPDATE id = id;
 
 -- Optional sample shop seed data
 SET @default_password = '$2b$10$ZQz5QZ5QZ5QZ5QZ5QZ5QZueWqL5QZ5QZ5QZ5QZ5QZ5QZ5QZ5QZ5Q';

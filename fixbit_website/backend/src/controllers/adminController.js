@@ -7,6 +7,23 @@ async function getUsers(req, res) {
   return ok(res, 'Users loaded', { users });
 }
 
+async function getAnalytics(req, res) {
+  const [users, requests] = await Promise.all([
+    User.listUsers(),
+    Request.listAllForAdmin()
+  ]);
+
+  const totalUsers = users.filter(user => user.role === 'user').length;
+  const totalShops = users.filter(user => user.role === 'shop').length;
+  const activeRequests = requests.filter(request => ['pending', 'accepted', 'in_progress'].includes(String(request.status))).length;
+
+  return ok(res, 'Analytics loaded', {
+    totalUsers,
+    totalShops,
+    activeRequests
+  });
+}
+
 async function toggleBan(req, res) {
   const userId = Number(req.params.id);
   const banned = Boolean(req.body.banned);
@@ -39,6 +56,7 @@ async function deleteRequest(req, res) {
 }
 
 module.exports = {
+  getAnalytics,
   getUsers,
   toggleBan,
   getRequests,
