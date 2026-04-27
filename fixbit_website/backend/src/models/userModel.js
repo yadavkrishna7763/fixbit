@@ -127,7 +127,7 @@ async function setBanned(userId, banned) {
   await db.query('UPDATE users SET banned = ? WHERE id = ?', [banned ? 1 : 0, userId]);
 }
 
-async function searchShops({ q, limit }) {
+async function searchShops({ q, limit, minRating = null, requireLocation = false }) {
   const params = [];
   let sql = `
     SELECT id, name, phone, latitude, longitude, avg_rating, profile_image, address, working_hours, description, is_verified, completed_jobs, last_active_at
@@ -138,6 +138,15 @@ async function searchShops({ q, limit }) {
   if (q) {
     sql += ' AND name LIKE ?';
     params.push(`%${q}%`);
+  }
+
+  if (minRating !== null) {
+    sql += ' AND COALESCE(avg_rating, 0) >= ?';
+    params.push(minRating);
+  }
+
+  if (requireLocation) {
+    sql += ' AND latitude IS NOT NULL AND longitude IS NOT NULL';
   }
 
   sql += ' ORDER BY COALESCE(avg_rating, 0) DESC, name ASC LIMIT ?';

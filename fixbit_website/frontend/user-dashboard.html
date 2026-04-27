@@ -315,9 +315,25 @@
         <div id="tab-shops" style="display:none;">
           <div style="display: flex; flex-direction: column; height: calc(100vh - 120px);">
             <!-- Search Bar -->
-            <div style="padding: 0 0 1rem 0; display: flex; gap: 0.6rem;">
+            <div style="padding: 0 0 1rem 0; display: flex; gap: 0.6rem; flex-wrap: wrap;">
               <input type="text" id="shopSearchInput" placeholder="Search by shop name..." class="form-input"
                 style="flex:1;" />
+              <select id="shopRatingFilter" class="form-select" style="min-width: 150px;">
+                <option value="0">All ratings</option>
+                <option value="4.5">4.5+ rating</option>
+                <option value="4">4.0+ rating</option>
+                <option value="3.5">3.5+ rating</option>
+              </select>
+              <select id="shopDistanceFilter" class="form-select" style="min-width: 160px;">
+                <option value="10">Within 10 km</option>
+                <option value="5">Within 5 km</option>
+                <option value="15">Within 15 km</option>
+                <option value="25">Within 25 km</option>
+              </select>
+              <select id="shopSortFilter" class="form-select" style="min-width: 150px;">
+                <option value="distance">Nearest first</option>
+                <option value="rating">Highest rated</option>
+              </select>
               <button onclick="searchShops()" class="btn btn-primary">🔍 Search</button>
               <button onclick="loadNearbyShopsOnMap()" class="btn btn-secondary btn-sm" title="Refresh map">🔄</button>
             </div>
@@ -956,6 +972,8 @@
           // ==================== SHOP MAP & SEARCH ====================
           let shopsMap = null;
           let shopsMarkers = [];
+          let shopsUserLocation = null;
+          let shopsUserMarker = null;
 
           // Initialize map when the tab is first shown
           function initShopsMap() {
@@ -981,12 +999,17 @@
               const pos = await getCurrentPosition();
               userLat = pos.lat;
               userLng = pos.lng;
+              shopsUserLocation = { lat: userLat, lng: userLng };
 
               // Center map on user's location
               shopsMap.setView([userLat, userLng], 13);
 
               // Add a marker for the user's location
-              L.marker([userLat, userLng], {
+              if (shopsUserMarker) {
+                shopsMap.removeLayer(shopsUserMarker);
+              }
+
+              shopsUserMarker = L.marker([userLat, userLng], {
                 icon: L.divIcon({
                   className: 'user-location-marker',
                   html: '<div style="background: #14b8a6; width: 14px; height: 14px; border-radius: 50%; border: 3px solid white; box-shadow: 0 0 10px #14b8a6;"></div>',
@@ -996,18 +1019,12 @@
               }).addTo(shopsMap).bindPopup('<b>Your Location</b>').openPopup();
 
             } catch (e) {
+              shopsUserLocation = null;
               showToast('Could not get your location. Showing all shops.', 'info');
             }
 
-            // Fetch shops from API
-            let shops = [];
-            try {
-              const data = await apiRequest('/shops/search?limit=100');
-              if (data.success) shops = data.shops;
-            } catch (e) {
-              showToast('Failed to load shops', 'error');
-              return;
-            }
+            const shops = await fetchShopsForView();
+            if (!shops) return;
 
             // Clear existing markers
             shopsMarkers.forEach(m => shopsMap.removeLayer(m));
@@ -1061,6 +1078,40 @@
 
             // Also render the list view
             renderShopList(shops);
+          }
+
+          function getShopFilterValues() {
+            return {
+              query: document.getElementById('shopSearchInput')?.value.trim() || '',
+              minRating: document.getElementById('shopRatingFilter')?.value || '0',
+              maxDistance: document.getElementById('shopDistanceFilter')?.value || '10',
+              sortBy: document.getElementById('shopSortFilter')?.value || 'distance'
+            };
+          }
+
+          async function fetchShopsForView() {
+            const { query, minRating, maxDistance, sortBy } = getShopFilterValues();
+            const params = new URLSearchParams({
+              limit: '100',
+              sortBy
+            });
+
+            if (query) params.set('q', query);
+            if (Number(minRating) > 0) params.set('minRating', minRating);
+
+            if (shopsUserLocation?.lat !== undefined && shopsUserLocation?.lng !== undefined) {
+              params.set('lat', shopsUserLocation.lat);
+              params.set('lng', shopsUserLocation.lng);
+              params.set('maxDistance', maxDistance);
+            }
+
+            try {
+              const data = await apiRequest(`/shops/search?${params.toString()}`);
+              return data.success ? data.shops : [];
+            } catch (e) {
+              showToast('Failed to load shops', 'error');
+              return null;
+            }
           }
 
           // Helper: Distance calculation (Haversine)
@@ -1126,20 +1177,17 @@
 
           // Update the existing searchShops function to use map and list
           window.searchShops = async () => {
-            const q = document.getElementById('shopSearchInput').value;
-            if (!q.trim()) {
-              loadNearbyShopsOnMap();
+            if (!shopsMap) {
+              initShopsMap();
+            }
+
+            if (!shopsUserLocation) {
+              await loadNearbyShopsOnMap();
               return;
             }
 
-            let shops = [];
-            try {
-              const data = await apiRequest(`/shops/search?q=${encodeURIComponent(q)}`);
-              if (data.success) shops = data.shops;
-            } catch (e) {
-              showToast('Search failed', 'error');
-              return;
-            }
+            const shops = await fetchShopsForView();
+            if (!shops) return;
 
             // Update markers on map (filter existing or re-add)
             shopsMarkers.forEach(m => shopsMap.removeLayer(m));

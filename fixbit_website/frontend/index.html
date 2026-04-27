@@ -826,11 +826,12 @@
         const rating = shop.avg_rating ? parseFloat(shop.avg_rating).toFixed(1) : 'New';
         const shopName = shop.name || 'Shop';
         const jobsCount = Number(shop.completed_jobs || 0);
+        const shopImage = shop.profile_image ? assetUrl(shop.profile_image) : 'assets/default-shop.png';
         
         return `
           <div class="shop-card" onclick="window.location.href='login.html'">
             <div class="shop-img">
-              <img src="${shop.profile_image ? assetUrl(shop.profile_image) : 'https://images.unsplash.com/photo-1597872200969-2b65d56bd16b?auto=format&fit=crop&w=400&q=80'}" alt="${escapeHTML(shopName)}"/>
+              <img src="${shopImage}" alt="${escapeHTML(shopName)}" onerror="this.src='assets/default-shop.png'"/>
               <div class="shop-rating">⭐ ${rating}</div>
             </div>
             <div class="shop-body">

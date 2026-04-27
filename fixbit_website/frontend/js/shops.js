@@ -66,13 +66,13 @@ function renderShops(shops, container) {
     if (shop.category.toLowerCase().includes('apple')) badgeClass = 'shop-tag-blue';
     if (shop.category.toLowerCase().includes('all')) badgeClass = 'shop-tag-purple';
 
-    let finalImage = shop.image;
-    if (shop.image && !shop.image.startsWith('http') && !shop.image.startsWith('assets/')) {
+    let finalImage = shop.profile_image || shop.image || 'assets/default-shop.png';
+    if (finalImage && !finalImage.startsWith('http') && !finalImage.startsWith('assets/')) {
         if (typeof assetUrl === 'function') {
-            finalImage = assetUrl(shop.image);
+            finalImage = assetUrl(finalImage);
         } else {
             // Fallback if assetUrl is missing
-            finalImage = `http://localhost:5050${shop.image.startsWith('/') ? '' : '/'}${shop.image}`;
+            finalImage = `http://localhost:5050${finalImage.startsWith('/') ? '' : '/'}${finalImage}`;
         }
     }
 
