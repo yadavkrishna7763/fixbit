@@ -11,14 +11,14 @@
 
 <div class="auth-page">
   <!-- Decorative bg shapes -->
-  <div style="position:absolute;width:400px;height:400px;background:radial-gradient(circle,rgba(13,148,136,.12),transparent 70%);top:-100px;right:-100px;pointer-events:none;z-index:0;"></div>
-  <div style="position:absolute;width:300px;height:300px;background:radial-gradient(circle,rgba(249,115,22,.08),transparent 70%);bottom:-50px;left:-80px;pointer-events:none;z-index:0;"></div>
+  <div style="position:absolute;width:400px;height:400px;background:radial-gradient(circle,color-mix(in srgb,var(--teal-500) 12%,transparent),transparent 70%);top:-100px;right:-100px;pointer-events:none;z-index:0;"></div>
+  <div style="position:absolute;width:300px;height:300px;background:radial-gradient(circle,color-mix(in srgb,var(--orange-500) 8%,transparent),transparent 70%);bottom:-50px;left:-80px;pointer-events:none;z-index:0;"></div>
 
-  <div class="auth-card" style="max-width:420px; position:relative; z-index:1;">
+  <div class="auth-card glass-panel" style="max-width:420px; position:relative; z-index:1; animation: fadeUp 0.6s cubic-bezier(0.4, 0, 0.2, 1);">
 
     <div class="auth-logo">
       <a href="index.html" style="text-decoration:none; display:inline-flex; align-items:center; gap:.4rem; justify-content:center; margin-bottom:.3rem;">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z" stroke="var(--teal-600)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>
         <h1 class="font-outfit" style="font-size:1.9rem; color:var(--teal-700); letter-spacing:-.03em; -webkit-text-fill-color:initial;">FixBit</h1>
       </a>
       <p style="color:var(--slate-400); font-size:.88rem;">Log in to your account</p>
@@ -34,9 +34,10 @@
       </div>
       <div class="form-group">
         <label class="form-label">Password</label>
-        <div class="input-icon-wrap">
+        <div class="input-icon-wrap" style="position:relative;">
           <span class="icon">🔒</span>
-          <input class="form-input" id="password" type="password" placeholder="Enter password" required/>
+          <input class="form-input" id="password" type="password" placeholder="Enter password" required style="padding-right:40px;"/>
+          <button type="button" onclick="const p=document.getElementById('password'); p.type=p.type==='password'?'text':'password'; this.innerText=p.type==='password'?'👁️':'🙈';" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; cursor:pointer; font-size:1.1rem; opacity:0.7; transition:opacity 0.2s;" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.7">👁️</button>
         </div>
       </div>
       <div id="errorMsg" class="error-message" style="display:none;"></div>
@@ -44,6 +45,9 @@
         Log In →
       </button>
     </form>
+    <p style="text-align:right; margin-top:.45rem;">
+      <a href="#" id="forgotPasswordLink" style="font-size:.78rem; color:var(--teal-600); text-decoration:none;">Forgot password?</a>
+    </p>
 
     <div class="auth-divider">new to FixBit?</div>
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:.6rem; margin-bottom:1.25rem;">
@@ -62,9 +66,72 @@
 </div>
 
 <div class="toast-container" id="toastContainer"></div>
+
+<div id="forgotPasswordModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.55); z-index:2000; align-items:center; justify-content:center; padding:1rem;">
+  <div class="glass-panel" style="width:min(100%, 460px); padding:1.25rem; border-radius:20px; position:relative;">
+    <button type="button" id="forgotPasswordCloseBtn" style="position:absolute; top:12px; right:12px; border:none; background:none; font-size:1.2rem; cursor:pointer; color:var(--slate-500);">✕</button>
+    <h3 class="font-outfit" style="font-size:1.35rem; margin-bottom:.35rem; color:var(--slate-800);">Reset Password</h3>
+    <p id="forgotPasswordIntro" style="font-size:.88rem; color:var(--slate-500); margin-bottom:1rem;">Use your email to receive a one-time password.</p>
+
+    <form id="forgotPasswordForm">
+      <div class="form-group">
+        <label class="form-label" for="resetIdentifier">Registered Email</label>
+        <input class="form-input" id="resetIdentifier" type="text" placeholder="Enter email" required />
+      </div>
+      <input type="hidden" name="resetChannel" value="email">
+      <button type="submit" class="btn btn-primary btn-full" id="forgotPasswordSubmitBtn">Send OTP</button>
+    </form>
+
+    <form id="verifyOtpForm" style="display:none; margin-top:1rem;">
+      <div class="form-group">
+        <label class="form-label" for="resetOtpInput">6-digit OTP</label>
+        <input class="form-input" id="resetOtpInput" type="text" inputmode="numeric" maxlength="6" placeholder="Enter OTP" required />
+      </div>
+      <div style="display:flex; gap:.6rem;">
+        <button type="submit" class="btn btn-primary" style="flex:1" id="verifyOtpBtn">Verify OTP</button>
+        <button type="button" class="btn btn-outline" style="flex:1" id="resendResetOtpBtn">Resend OTP</button>
+      </div>
+    </form>
+
+    <form id="resetPasswordForm" style="display:none; margin-top:1rem;">
+      <div class="form-group">
+        <label class="form-label" for="newPasswordInput">New Password</label>
+        <input class="form-input" id="newPasswordInput" type="password" placeholder="Minimum 6 characters" minlength="6" required />
+      </div>
+      <button type="submit" class="btn btn-primary btn-full" id="resetPasswordSubmitBtn">Reset Password</button>
+    </form>
+  </div>
+</div>
+
 <script src="config.js"></script>
 <script src="script.js"></script>
 <script>
+  let passwordResetVerificationId = null;
+  let passwordResetToken = null;
+  const forgotPasswordModal = document.getElementById('forgotPasswordModal');
+  const forgotPasswordForm = document.getElementById('forgotPasswordForm');
+  const verifyOtpForm = document.getElementById('verifyOtpForm');
+  const resetPasswordForm = document.getElementById('resetPasswordForm');
+  const resetOtpInput = document.getElementById('resetOtpInput');
+  const newPasswordInput = document.getElementById('newPasswordInput');
+  const resetIdentifierInput = document.getElementById('resetIdentifier');
+
+  function openForgotPasswordModal() {
+    forgotPasswordModal.style.display = 'flex';
+    forgotPasswordForm.reset();
+    verifyOtpForm.reset();
+    resetPasswordForm.reset();
+    verifyOtpForm.style.display = 'none';
+    resetPasswordForm.style.display = 'none';
+    passwordResetVerificationId = null;
+    passwordResetToken = null;
+    resetIdentifierInput.focus();
+  }
+
+  function closeForgotPasswordModal() {
+    forgotPasswordModal.style.display = 'none';
+  }
+
   document.getElementById('loginForm').addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('email').value;
@@ -74,10 +141,103 @@
     try {
       await login(email, password);
     } catch (err) {
-      document.getElementById('errorMsg').style.display = 'block';
-      document.getElementById('errorMsg').innerText = err.message;
+      const errMsg = document.getElementById('errorMsg');
+      errMsg.style.display = 'block';
+      errMsg.innerText = err.message;
+      errMsg.classList.remove('animate-shake');
+      void errMsg.offsetWidth; // trigger reflow to restart animation
+      errMsg.classList.add('animate-shake');
     } finally {
       btn.classList.remove('btn-loading'); btn.disabled = false;
+    }
+  });
+
+  document.getElementById('forgotPasswordLink').addEventListener('click', async (e) => {
+    e.preventDefault();
+    openForgotPasswordModal();
+  });
+
+  document.getElementById('forgotPasswordCloseBtn').addEventListener('click', closeForgotPasswordModal);
+  forgotPasswordModal.addEventListener('click', (e) => {
+    if (e.target === forgotPasswordModal) closeForgotPasswordModal();
+  });
+
+  forgotPasswordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const identifier = resetIdentifierInput.value.trim();
+    const channel = document.querySelector('input[name="resetChannel"]:checked').value;
+    if (!identifier) return;
+    const btn = document.getElementById('forgotPasswordSubmitBtn');
+    btn.classList.add('btn-loading');
+    btn.disabled = true;
+    try {
+      const response = await forgotPassword(identifier.trim(), channel);
+      if (!response.success) return;
+      passwordResetVerificationId = response.verificationId;
+      verifyOtpForm.style.display = 'block';
+      resetPasswordForm.style.display = 'none';
+      resetOtpInput.focus();
+      showToast(`OTP sent to ${response.maskedDestination}`, 'success');
+    } catch (err) {
+    } finally {
+      btn.classList.remove('btn-loading');
+      btn.disabled = false;
+    }
+  });
+
+  verifyOtpForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!passwordResetVerificationId) return;
+    const btn = document.getElementById('verifyOtpBtn');
+    btn.classList.add('btn-loading');
+    btn.disabled = true;
+    try {
+      const response = await verifyForgotPasswordOtp(passwordResetVerificationId, resetOtpInput.value.trim());
+      if (response.success) {
+        passwordResetToken = response.resetToken;
+        resetPasswordForm.style.display = 'block';
+        newPasswordInput.focus();
+        showToast('OTP verified. Set your new password.', 'success');
+      }
+    } catch (err) {
+    } finally {
+      btn.classList.remove('btn-loading');
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('resendResetOtpBtn').addEventListener('click', async () => {
+    if (!passwordResetVerificationId) return;
+    const btn = document.getElementById('resendResetOtpBtn');
+    btn.classList.add('btn-loading');
+    btn.disabled = true;
+    try {
+      const response = await resendForgotPasswordOtp(passwordResetVerificationId);
+      showToast(`New OTP sent to ${response.maskedDestination}`, 'success');
+    } catch (err) {
+    } finally {
+      btn.classList.remove('btn-loading');
+      btn.disabled = false;
+    }
+  });
+
+  resetPasswordForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const newPassword = newPasswordInput.value;
+    if (!passwordResetToken || !newPassword) return;
+    const btn = document.getElementById('resetPasswordSubmitBtn');
+    btn.classList.add('btn-loading');
+    btn.disabled = true;
+    try {
+      const reset = await resetPassword(passwordResetToken, newPassword);
+      if (reset.success) {
+        showToast('Password reset successful. Please log in.', 'success');
+        closeForgotPasswordModal();
+      }
+    } catch (err) {
+    } finally {
+      btn.classList.remove('btn-loading');
+      btn.disabled = false;
     }
   });
 </script>
