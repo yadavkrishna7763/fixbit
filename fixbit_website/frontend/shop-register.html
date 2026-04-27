@@ -273,7 +273,7 @@
     const password = document.getElementById('password').value;
     const lat = document.getElementById('latitude').value;
     const lng = document.getElementById('longitude').value;
-    const verificationChannel = document.querySelector('input[name="verificationChannel"]:checked').value;
+    const verificationChannel = document.querySelector('input[name="verificationChannel"]').value;
     const normalizedPhone = normalizePhoneInput(phone);
     const normalizedEmail = normalizeEmailInput(email);
 
@@ -320,14 +320,12 @@
         image: imageBase64,
         categories: selectedCategories
       };
-      const response = await startRegistrationOtp({
-        phone: normalizedPhone,
-        email: normalizedEmail,
-        role: 'shop',
+      await registerAccount({
+        ...registrationDraft,
         verificationChannel
       });
-      registrationVerificationId = response.verificationId;
-      openOtpModal(response.maskedDestination);
+      showToast('Shop registration successful! Please log in.', 'success');
+      window.location.href = 'login.html';
     } catch (err) {
       const errMsg = document.getElementById('errorMsg');
       errMsg.style.display = 'block';

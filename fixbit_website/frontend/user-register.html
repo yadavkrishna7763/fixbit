@@ -163,7 +163,7 @@
     const password = document.getElementById('password').value;
     const lat = document.getElementById('latitude').value;
     const lng = document.getElementById('longitude').value;
-    const verificationChannel = document.querySelector('input[name="verificationChannel"]:checked').value;
+    const verificationChannel = document.querySelector('input[name="verificationChannel"]').value;
     const normalizedPhone = normalizePhoneInput(phone);
     const normalizedEmail = normalizeEmailInput(email);
 
@@ -195,14 +195,12 @@
         longitude: lng || null
       };
 
-      const response = await startRegistrationOtp({
-        phone: normalizedPhone,
-        email: normalizedEmail,
-        role: 'user',
+      await registerAccount({
+        ...registrationDraft,
         verificationChannel
       });
-      registrationVerificationId = response.verificationId;
-      openOtpModal(response.maskedDestination);
+      showToast('Registration successful! Please log in.', 'success');
+      window.location.href = 'login.html';
     } catch (err) {
       document.getElementById('errorMsg').style.display = 'block';
       document.getElementById('errorMsg').innerText = err.message;

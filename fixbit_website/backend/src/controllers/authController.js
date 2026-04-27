@@ -2,6 +2,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../models/userModel');
 const { ok, fail } = require('../utils/apiResponse');
+const { inferIdentifierType, normalizeEmailAddress, normalizePhoneNumber } = require('../utils/contact');
 const {
   cleanString,
   nullableString,
@@ -13,8 +14,8 @@ const {
 
 async function register(req, res) {
   const name = cleanString(req.body.name, 120);
-  const email = nullableString(req.body.email, 150);
-  const phone = cleanString(req.body.phone, 20);
+  const email = normalizeEmailAddress(nullableString(req.body.email, 150));
+  const phone = normalizePhoneNumber(req.body.phone);
   const password = cleanString(req.body.password, 255);
   const role = cleanString(req.body.role, 20);
   const latitude = toNumber(req.body.latitude);
@@ -29,7 +30,7 @@ async function register(req, res) {
   }
 
   if (!isValidPhone(phone)) {
-    return fail(res, 400, 'Phone must be 10 digits');
+    return fail(res, 400, 'Enter a valid phone number with or without country code');
   }
 
   if (!isValidEmail(email)) {
@@ -60,8 +61,11 @@ async function register(req, res) {
 }
 
 async function login(req, res) {
-  const identifier = cleanString(req.body.email || req.body.phone, 150);
+  const rawIdentifier = cleanString(req.body.identifier || req.body.email || req.body.phone, 150);
   const password = cleanString(req.body.password, 255);
+  const identifier = inferIdentifierType(rawIdentifier) === 'email'
+    ? normalizeEmailAddress(rawIdentifier)
+    : normalizePhoneNumber(rawIdentifier);
 
   if (!identifier || !password) {
     return fail(res, 400, 'Email/phone and password required');

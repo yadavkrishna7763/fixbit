@@ -1,3 +1,5 @@
+const { normalizePhoneNumber } = require('./contact');
+
 const VALID_ROLES = new Set(['user', 'shop']);
 
 function cleanString(value, maxLength = 1000) {
@@ -15,7 +17,7 @@ function nullableString(value, maxLength = 1000) {
 }
 
 function isValidPhone(phone) {
-  return /^\d{10}$/.test(cleanString(phone, 20));
+  return Boolean(normalizePhoneNumber(cleanString(phone, 32)));
 }
 
 function isValidEmail(email) {

@@ -1,4 +1,5 @@
 const db = require('../db');
+const { normalizeEmailAddress, normalizePhoneNumber } = require('../utils/contact');
 
 const SAFE_USER_FIELDS = `
   id, name, email, phone, role, latitude, longitude, avg_rating, banned,
@@ -6,29 +7,46 @@ const SAFE_USER_FIELDS = `
 `;
 
 async function findByPhoneOrEmail(phone, email) {
+  const normalizedPhone = normalizePhoneNumber(phone);
+  const normalizedEmail = normalizeEmailAddress(email);
   const [rows] = await db.query(
     `SELECT id FROM users
-     WHERE phone = ? OR (? IS NOT NULL AND email = ?)`,
-    [phone, email, email]
+     WHERE phone = ?
+        OR normalized_phone = ?
+        OR (? IS NOT NULL AND email = ?)`,
+    [normalizedPhone || phone, normalizedPhone, normalizedEmail, normalizedEmail]
   );
 
   return rows;
 }
 
 async function findConflictingContact(phone, email, userId) {
+  const normalizedPhone = normalizePhoneNumber(phone);
+  const normalizedEmail = normalizeEmailAddress(email);
   const [rows] = await db.query(
     `SELECT id FROM users
-     WHERE id <> ? AND (phone = ? OR (? IS NOT NULL AND email = ?))`,
-    [userId, phone, email, email]
+     WHERE id <> ?
+       AND (
+         phone = ?
+         OR normalized_phone = ?
+         OR (? IS NOT NULL AND email = ?)
+       )`,
+    [userId, normalizedPhone || phone, normalizedPhone, normalizedEmail, normalizedEmail]
   );
 
   return rows[0] || null;
 }
 
 async function findByLogin(identifier) {
+  const normalizedIdentifier = normalizePhoneNumber(identifier);
+  const normalizedEmail = normalizeEmailAddress(identifier);
   const [rows] = await db.query(
-    'SELECT * FROM users WHERE email = ? OR phone = ? LIMIT 1',
-    [identifier, identifier]
+    `SELECT * FROM users
+     WHERE email = ?
+        OR phone = ?
+        OR normalized_phone = ?
+     LIMIT 1`,
+    [normalizedEmail || identifier, normalizedIdentifier || identifier, normalizedIdentifier]
   );
 
   return rows[0] || null;
@@ -44,13 +62,16 @@ async function findSafeById(id) {
 }
 
 async function createUser(user) {
+  const normalizedPhone = normalizePhoneNumber(user.phone);
+  const normalizedEmail = normalizeEmailAddress(user.email);
   const [result] = await db.query(
-    `INSERT INTO users (name, email, phone, password, role, latitude, longitude)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO users (name, email, phone, normalized_phone, password, role, latitude, longitude)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       user.name,
-      user.email,
-      user.phone,
+      normalizedEmail,
+      normalizedPhone || user.phone,
+      normalizedPhone,
       user.password,
       user.role,
       user.latitude,

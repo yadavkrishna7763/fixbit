@@ -165,7 +165,7 @@
   forgotPasswordForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const identifier = resetIdentifierInput.value.trim();
-    const channel = document.querySelector('input[name="resetChannel"]:checked').value;
+    const channel = document.querySelector('input[name="resetChannel"]').value;
     if (!identifier) return;
     const btn = document.getElementById('forgotPasswordSubmitBtn');
     btn.classList.add('btn-loading');

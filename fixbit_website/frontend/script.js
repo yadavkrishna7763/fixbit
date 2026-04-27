@@ -221,27 +221,32 @@ async function login(identifier, password) {
 }
 
 async function startRegistrationOtp(registrationData) {
+  return await registerAccount({
+    ...registrationData,
+    email: normalizeEmailInput(registrationData.email),
+    phone: normalizePhoneInput(registrationData.phone)
+  });
+}
+
+async function registerAccount(registrationData) {
   const payload = {
+    name: String(registrationData.name || '').trim(),
     email: normalizeEmailInput(registrationData.email),
     phone: normalizePhoneInput(registrationData.phone),
     role: registrationData.role,
-    verification_channel: registrationData.verificationChannel || 'email'
+    password: String(registrationData.password || ''),
+    latitude: registrationData.latitude ?? null,
+    longitude: registrationData.longitude ?? null
   };
-  return await apiRequest('/auth/register/start', 'POST', payload, false);
+  return await apiRequest('/auth/register', 'POST', payload, false);
 }
 
 async function completeRegistrationOtp(registrationData, verificationId, otp) {
-  return await apiRequest('/auth/register/verify', 'POST', {
-    ...registrationData,
-    email: normalizeEmailInput(registrationData.email),
-    phone: normalizePhoneInput(registrationData.phone),
-    verification_id: verificationId,
-    otp
-  }, false);
+  return await registerAccount(registrationData);
 }
 
 async function resendRegistrationOtp(verificationId) {
-  return await apiRequest('/auth/register/resend', 'POST', { verification_id: verificationId }, false);
+  throw new Error('OTP-based registration is not available on this backend');
 }
 
 async function forgotPassword(identifier, channel = '') {
