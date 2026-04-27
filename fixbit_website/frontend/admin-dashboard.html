@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FixBit Admin Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="toast-container" id="toastContainer"></div>
+
+  <div class="dash-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar" style="--sidebar-accent: var(--primary-600);">
+      <div class="sidebar-logo" style="color:var(--primary-600);">👑 FixBit Admin</div>
+      <nav style="margin-top:2rem;">
+        <button class="nav-item active" onclick="showTab('analytics', this)">📊 Analytics</button>
+        <button class="nav-item" onclick="showTab('users', this)">👥 Users & Shops</button>
+        <button class="nav-item" onclick="showTab('complaints', this)">🎫 Support Tickets</button>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="nav-item" onclick="logout()">🚪 Log Out</button>
+      </div>
+    </aside>
+
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <!-- Main Content -->
+    <main class="dash-main">
+      <div class="dash-topbar">
+        <div>
+          <h2 class="font-outfit">Admin Control Panel</h2>
+          <div class="sub">Manage the FixBit platform</div>
+        </div>
+        <div style="display:flex; gap:.5rem; align-items:center;">
+          <button onclick="toggleSidebar()" class="btn btn-outline btn-sm" id="hamburgerBtn" style="display:none;">☰</button>
+        </div>
+      </div>
+
+      <div class="dash-content">
+
+        <!-- ANALYTICS TAB -->
+        <div id="tab-analytics">
+          <h3 style="margin-bottom:1rem; font-size:1.2rem; font-weight:700;">Platform Overview</h3>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; margin-bottom:1.5rem;">
+            <div class="card" style="padding:1.5rem; text-align:center;">
+              <div style="font-size:2.5rem; font-weight:800; color:var(--primary-600);" id="statUsers">0</div>
+              <div style="font-size:.9rem; color:var(--slate-500); font-weight:600;">Total Users</div>
+            </div>
+            <div class="card" style="padding:1.5rem; text-align:center;">
+              <div style="font-size:2.5rem; font-weight:800; color:var(--orange-600);" id="statShops">0</div>
+              <div style="font-size:.9rem; color:var(--slate-500); font-weight:600;">Total Shops</div>
+            </div>
+            <div class="card" style="padding:1.5rem; text-align:center;">
+              <div style="font-size:2.5rem; font-weight:800; color:var(--slate-800);" id="statRequests">0</div>
+              <div style="font-size:.9rem; color:var(--slate-500); font-weight:600;">Active Requests</div>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="loadAnalytics()">🔄 Refresh Data</button>
+        </div>
+
+        <!-- USERS & SHOPS TAB -->
+        <div id="tab-users" style="display:none;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+            <h3 style="font-size:1.2rem; font-weight:700;">User & Shop Directory</h3>
+            <select id="userFilter" class="form-select" style="width:auto;" onchange="loadUsers()">
+              <option value="">All Accounts</option>
+              <option value="user">Customers Only</option>
+              <option value="shop">Shops Only</option>
+            </select>
+          </div>
+          <div class="card" style="overflow-x:auto;">
+            <table style="width:100%; text-align:left; border-collapse:collapse;">
+              <thead>
+                <tr style="border-bottom:1px solid var(--border-color);">
+                  <th style="padding:1rem;">ID</th>
+                  <th style="padding:1rem;">Name</th>
+                  <th style="padding:1rem;">Role</th>
+                  <th style="padding:1rem;">Phone</th>
+                  <th style="padding:1rem;">Status</th>
+                  <th style="padding:1rem; text-align:right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="usersListBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- COMPLAINTS TAB -->
+        <div id="tab-complaints" style="display:none;">
+          <h3 style="margin-bottom:1rem; font-size:1.2rem; font-weight:700;">Support Tickets</h3>
+          <div id="complaintsList"></div>
+        </div>
+
+      </div>
+    </main>
+  </div>
+
+  <!-- MODALS -->
+  <div id="userDetailModal" style="display:none; position:fixed; inset:0; background:var(--overlay-backdrop); z-index:1000; align-items:center; justify-content:center; backdrop-filter:blur(6px);">
+    <div class="auth-card" style="max-width:500px; width:100%;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+        <h3 id="udName" style="font-weight:700;">User Details</h3>
+        <button onclick="closeUserModal()" class="btn btn-outline btn-sm">✕</button>
+      </div>
+      <div id="udContent" style="font-size:0.9rem; color:var(--slate-600); line-height:1.6;"></div>
+      <div style="display:flex; gap:0.5rem; margin-top:1.5rem; flex-wrap:wrap;" id="udActions"></div>
+    </div>
+  </div>
+
+  <div id="resolveComplaintModal" style="display:none; position:fixed; inset:0; background:var(--overlay-backdrop); z-index:1000; align-items:center; justify-content:center; backdrop-filter:blur(6px);">
+    <div class="auth-card" style="max-width:500px; width:100%;">
+      <h3 style="font-weight:700; margin-bottom:1rem;">Resolve Support Ticket</h3>
+      <input type="hidden" id="rcId" />
+      <div class="form-group">
+        <label class="form-label">Admin Response</label>
+        <textarea id="rcResponse" class="form-textarea" rows="4" placeholder="Type your resolution here..."></textarea>
+      </div>
+      <div style="display:flex; gap:0.5rem;">
+        <button class="btn btn-primary" style="flex:1;" onclick="submitResolution()">Mark as Resolved</button>
+        <button class="btn btn-outline" style="flex:1;" onclick="closeResolveModal()">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="config.js"></script>
+  <script src="script.js"></script>
+  <script>
+    // Auth Check
+    const token = localStorage.getItem('token');
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (!token || !user.id || !['admin@fixbit.com', 'admin@gmail.com'].includes(user.email?.toLowerCase())) {
+      alert('Unauthorized. Admin access only.');
+      window.location.href = 'login.html';
+    }
+
+    if (window.innerWidth < 768) document.getElementById('hamburgerBtn').style.display = 'flex';
+    window.toggleSidebar = () => {
+      document.getElementById('sidebar').classList.toggle('open');
+      document.getElementById('sidebarOverlay').classList.toggle('show');
+    };
+    window.closeSidebar = () => {
+      document.getElementById('sidebar').classList.remove('open');
+      document.getElementById('sidebarOverlay').classList.remove('show');
+    };
+
+    window.showTab = (tabId, el) => {
+      document.querySelectorAll('[id^="tab-"]').forEach(t => t.style.display = 'none');
+      document.getElementById(`tab-${tabId}`).style.display = 'block';
+      document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+      el.classList.add('active');
+      closeSidebar();
+      
+      if (tabId === 'analytics') loadAnalytics();
+      if (tabId === 'users') loadUsers();
+      if (tabId === 'complaints') loadComplaints();
+    };
+
+    // Analytics
+    async function loadAnalytics() {
+      try {
+        const res = await apiRequest('/admin/analytics');
+        if (res.success) {
+          document.getElementById('statUsers').innerText = res.totalUsers;
+          document.getElementById('statShops').innerText = res.totalShops;
+          document.getElementById('statRequests').innerText = res.activeRequests;
+        }
+      } catch (e) { showToast('Error loading analytics', 'error'); }
+    }
+
+    // Users & Shops
+    let currentUsers = [];
+    async function loadUsers() {
+      const role = document.getElementById('userFilter').value;
+      try {
+        const res = await apiRequest(`/admin/users${role ? '?role='+role : ''}`);
+        if (res.success) {
+          currentUsers = res.users;
+          document.getElementById('usersListBody').innerHTML = res.users.map(u => `
+            <tr style="border-bottom:1px solid var(--slate-100);">
+              <td style="padding:1rem;">#${u.id}</td>
+              <td style="padding:1rem; font-weight:600;">${escapeHTML(u.name)} ${u.is_verified ? '✅' : ''}</td>
+              <td style="padding:1rem;">
+                <span class="badge ${u.role==='shop'?'badge-orange':'badge-teal'}">${u.role.toUpperCase()}</span>
+              </td>
+              <td style="padding:1rem;">${u.phone}</td>
+              <td style="padding:1rem;">
+                ${u.banned ? '<span class="badge badge-red">BANNED</span>' : '<span class="badge badge-green">ACTIVE</span>'}
+              </td>
+              <td style="padding:1rem; text-align:right;">
+                <button class="btn btn-sm btn-outline" onclick="openUserModal(${u.id})">Details</button>
+              </td>
+            </tr>
+          `).join('');
+        }
+      } catch (e) { showToast('Error loading users', 'error'); }
+    }
+
+    window.openUserModal = (id) => {
+      const u = currentUsers.find(x => x.id === id);
+      if(!u) return;
+      document.getElementById('udName').innerText = `${u.name} (ID: ${u.id})`;
+      document.getElementById('udContent').innerHTML = `
+        <p><strong>Email:</strong> ${u.email || 'N/A'}</p>
+        <p><strong>Phone:</strong> ${u.phone}</p>
+        <p><strong>Role:</strong> ${u.role}</p>
+        <p><strong>Status:</strong> ${u.banned ? 'Banned' : 'Active'}</p>
+        ${u.role === 'shop' ? `
+          <hr style="margin:1rem 0; border:none; border-top:1px solid var(--slate-200);">
+          <p><strong>Verified Shop:</strong> ${u.is_verified ? 'Yes ✅' : 'No ❌'}</p>
+          <p><strong>Address:</strong> ${u.address || 'N/A'}</p>
+          <p><strong>Completed Jobs:</strong> ${u.completed_jobs}</p>
+          <p><strong>Rating:</strong> ${u.avg_rating || 'N/A'}</p>
+        ` : ''}
+      `;
+
+      let actionsHTML = '';
+      if (u.banned) {
+        actionsHTML += `<button class="btn btn-sm btn-green" onclick="toggleBan(${u.id}, false)">Unban Account</button>`;
+      } else {
+        actionsHTML += `<button class="btn btn-sm" style="background:var(--red-600);color:#fff;" onclick="toggleBan(${u.id}, true)">Ban Account</button>`;
+      }
+      if (u.role === 'shop') {
+        if (u.is_verified) {
+          actionsHTML += `<button class="btn btn-sm btn-outline" onclick="toggleVerify(${u.id}, false)">Revoke Verification</button>`;
+        } else {
+          actionsHTML += `<button class="btn btn-sm btn-primary" onclick="toggleVerify(${u.id}, true)">Approve (Verify) Shop</button>`;
+        }
+      }
+      document.getElementById('udActions').innerHTML = actionsHTML;
+      document.getElementById('userDetailModal').style.display = 'flex';
+    };
+    window.closeUserModal = () => document.getElementById('userDetailModal').style.display = 'none';
+
+    window.toggleBan = async (id, banned) => {
+      try {
+        const res = await apiRequest(`/admin/users/${id}/ban`, 'PUT', { banned });
+        if (res.success) { showToast(res.message, 'success'); closeUserModal(); loadUsers(); }
+      } catch (e) { showToast('Action failed', 'error'); }
+    };
+    window.toggleVerify = async (id, is_verified) => {
+      try {
+        const res = await apiRequest(`/admin/users/${id}/verify`, 'PUT', { is_verified });
+        if (res.success) { showToast(res.message, 'success'); closeUserModal(); loadUsers(); }
+      } catch (e) { showToast('Action failed', 'error'); }
+    };
+
+    // Complaints
+    async function loadComplaints() {
+      const container = document.getElementById('complaintsList');
+      container.innerHTML = 'Loading...';
+      try {
+        const res = await apiRequest('/admin/complaints');
+        if (res.success) {
+          if (!res.complaints.length) {
+            container.innerHTML = '<div class="empty-state">No support tickets</div>';
+            return;
+          }
+          container.innerHTML = res.complaints.map(c => `
+            <div class="card mb-3" style="border-left: 4px solid ${c.status === 'open' ? 'var(--orange-500)' : 'var(--green-500)'}">
+              <div style="display:flex; justify-content:space-between;">
+                <h4 style="font-weight:700;">${escapeHTML(c.subject)}</h4>
+                <span class="badge ${c.status === 'open' ? 'badge-orange' : 'badge-green'}">${c.status.toUpperCase()}</span>
+              </div>
+              <p style="font-size:0.85rem; color:var(--slate-500); margin:0.5rem 0;">From: ${escapeHTML(c.user_name)} (${c.user_role}) - ${c.user_phone}</p>
+              <div style="background:var(--slate-50); padding:0.8rem; border-radius:8px; margin-bottom:1rem; font-size:0.9rem;">
+                ${escapeHTML(c.description)}
+              </div>
+              ${c.status === 'resolved' ? `
+                <div style="background:#f0fdfa; border:1px solid #ccfbf1; padding:0.8rem; border-radius:8px; font-size:0.9rem; color:var(--teal-800);">
+                  <strong>Admin Response:</strong> ${escapeHTML(c.admin_response)}
+                </div>
+              ` : `
+                <button class="btn btn-sm btn-primary" onclick="openResolveModal(${c.id})">Respond & Resolve</button>
+              `}
+            </div>
+          `).join('');
+        }
+      } catch (e) { container.innerHTML = 'Error loading complaints'; }
+    }
+
+    window.openResolveModal = (id) => {
+      document.getElementById('rcId').value = id;
+      document.getElementById('rcResponse').value = '';
+      document.getElementById('resolveComplaintModal').style.display = 'flex';
+    };
+    window.closeResolveModal = () => document.getElementById('resolveComplaintModal').style.display = 'none';
+
+    window.submitResolution = async () => {
+      const id = document.getElementById('rcId').value;
+      const response = document.getElementById('rcResponse').value;
+      if (!response.trim()) { showToast('Response is required', 'error'); return; }
+
+      try {
+        const res = await apiRequest(`/admin/complaints/${id}/resolve`, 'PUT', { admin_response: response });
+        if (res.success) { showToast('Ticket resolved', 'success'); closeResolveModal(); loadComplaints(); }
+      } catch (e) { showToast('Action failed', 'error'); }
+    };
+
+    // Init
+    loadAnalytics();
+  </script>
+</body>
+</html>

@@ -17,27 +17,85 @@
       <a href="index.html"><h1 class="font-outfit">🔧 FixBit</h1></a>
       <p>Register your repair shop</p>
     </div>
+    
+    <style>
+      .floating-group { position: relative; margin-bottom: 1.25rem; }
+      .floating-input {
+        width: 100%; padding: 1.3rem 1rem 0.5rem 1rem; font-size: 0.95rem;
+        border: 1.5px solid var(--input-border); border-radius: var(--radius-md);
+        background: var(--input-bg); color: var(--input-text); outline: none; transition: all 0.2s;
+      }
+      .floating-input:focus { border-color: var(--teal-500); box-shadow: 0 0 0 3px rgba(20,184,166,0.1); }
+      .floating-label {
+        position: absolute; left: 1rem; top: 50%; transform: translateY(-50%);
+        color: var(--input-placeholder); font-size: 0.95rem; pointer-events: none; transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+      }
+      .floating-input:focus ~ .floating-label,
+      .floating-input:not(:placeholder-shown) ~ .floating-label {
+        top: 0.4rem; transform: translateY(0); font-size: 0.75rem; color: var(--teal-600); font-weight: 500;
+      }
+      .success-tick { position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); color: var(--success); opacity: 0; transition: opacity 0.2s; font-size: 1.1rem; }
+      .floating-input:valid:not(:placeholder-shown) ~ .success-tick { opacity: 1; }
+      
+      .category-btn {
+        padding: 6px 12px; border: 1.5px solid var(--border-color); border-radius: 99px;
+        background: var(--bg-surface); color: var(--text-muted); font-size: 0.85rem;
+        font-weight: 500; cursor: pointer; transition: all 0.2s; user-select: none;
+      }
+      .category-btn.selected {
+        border-color: var(--teal-500); background: var(--teal-50);
+        color: var(--teal-700); font-weight: 600;
+      }
+    </style>
 
     <form id="shopRegisterForm">
       <div class="grid grid-cols-2 gap-3">
-        <div class="form-group">
-          <label class="form-label">Shop Name *</label>
-          <input class="form-input" id="name" required/>
+        <div class="floating-group">
+          <input class="floating-input" id="name" type="text" placeholder=" " required/>
+          <label class="floating-label">Shop Name *</label>
+          <span class="success-tick">✓</span>
         </div>
-        <div class="form-group">
-          <label class="form-label">Phone *</label>
-          <input class="form-input" id="phone" type="tel" pattern="[0-9]{10}" required/>
+        <div class="floating-group">
+          <input class="floating-input" id="phone" type="tel" placeholder=" " required/>
+          <label class="floating-label">Phone *</label>
+          <span class="success-tick">✓</span>
         </div>
       </div>
 
-      <div class="form-group">
-        <label class="form-label">Email (optional)</label>
-        <input class="form-input" id="email" type="email"/>
+      <div class="floating-group">
+        <input class="floating-input" id="email" type="email" placeholder=" " required/>
+        <label class="floating-label">Email *</label>
+        <span class="success-tick">✓</span>
       </div>
 
-      <div class="form-group">
-        <label class="form-label">Password *</label>
-        <input class="form-input" id="password" type="password" minlength="6" required/>
+      <input type="hidden" name="verificationChannel" value="email">
+
+      <div class="floating-group">
+        <input class="floating-input" id="password" type="password" minlength="6" placeholder=" " required/>
+        <label class="floating-label">Password *</label>
+        <span class="success-tick">✓</span>
+      </div>
+
+      <div class="form-group" style="margin-bottom:1.5rem;">
+        <label class="form-label" style="display:block; margin-bottom:.5rem;">Upload Shop Image</label>
+        <div id="imageUploadBox" style="border: 2px dashed var(--border-color); border-radius:var(--radius-lg); padding:1.5rem; text-align:center; cursor:pointer; background:var(--bg-surface-hover); transition:all 0.2s;" onmouseover="this.style.borderColor='var(--teal-400)'; this.style.background='var(--teal-50)'" onmouseout="this.style.borderColor='var(--border-color)'; this.style.background='var(--bg-surface-hover)'">
+          <input type="file" id="shopImage" accept="image/png, image/jpeg" style="display:none;">
+          <div id="uploadPlaceholder">
+            <div style="font-size:1.5rem; margin-bottom:4px;">📸</div>
+            <div style="font-weight:600; color:var(--text-main); font-size:0.9rem;">Click or drag image to upload</div>
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">JPG, PNG up to 5MB</div>
+          </div>
+          <img id="imagePreview" src="" alt="Preview" style="display:none; max-height:150px; margin:0 auto; border-radius:8px; box-shadow:var(--shadow-sm);">
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:1.5rem;">
+        <label class="form-label" style="display:block; margin-bottom:.5rem;">Categories Supported</label>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <div class="category-btn selected" data-category="mobile">📱 Mobile</div>
+          <div class="category-btn" data-category="laptop">💻 Laptop</div>
+          <div class="category-btn" data-category="tablet">⬛ Tablet</div>
+        </div>
       </div>
 
       <!-- Hidden location fields -->
@@ -46,9 +104,9 @@
 
       <div class="form-group">
         <label class="form-label">📍 Shop Location</label>
-        <div style="background:var(--slate-50); border-radius:12px; padding:1rem;">
-          <button type="button" id="liveLocBtn" class="btn btn-secondary btn-sm mb-3">📡 Use Live Location</button>
-          <div id="map" style="height:250px;"></div>
+        <div style="background:var(--bg-surface); border:1px solid var(--border-color); border-radius:16px; padding:12px; box-shadow:var(--shadow-md);">
+          <button type="button" id="liveLocBtn" class="btn btn-secondary btn-sm mb-3" style="width:100%; border-radius:12px; background:var(--teal-50); color:var(--teal-700); border:1px solid var(--teal-200);">📡 Use Live Location</button>
+          <div id="map" style="height:200px; border-radius:12px; z-index:0;"></div>
           <div id="locationInfo" style="display:none; margin-top:.75rem;" class="text-teal-700 bg-teal-50 p-2 rounded">
             ✅ Location selected
           </div>
@@ -57,7 +115,7 @@
 
       <div id="errorMsg" class="error-message" style="display:none;"></div>
 
-      <button type="submit" class="btn btn-primary btn-full btn-lg">Register Shop →</button>
+      <button type="submit" class="btn btn-primary btn-full btn-lg" style="margin-top:0.5rem; box-shadow:var(--shadow-teal);">Register Shop →</button>
     </form>
 
     <div class="auth-divider">already registered?</div>
@@ -66,10 +124,30 @@
 </div>
 
 <div class="toast-container" id="toastContainer"></div>
+<div id="otpModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.55); z-index:2000; align-items:center; justify-content:center; padding:1rem;">
+  <div class="glass-panel" style="width:min(100%, 460px); padding:1.25rem; border-radius:20px; position:relative;">
+    <button type="button" id="otpCloseBtn" style="position:absolute; top:12px; right:12px; border:none; background:none; font-size:1.2rem; cursor:pointer; color:var(--slate-500);">✕</button>
+    <h3 class="font-outfit" style="font-size:1.25rem; margin-bottom:.35rem; color:var(--slate-800);">Verify Your Shop Account</h3>
+    <p id="otpHelpText" style="font-size:.88rem; color:var(--slate-500); margin-bottom:1rem;">Enter the OTP we sent.</p>
+    <form id="otpForm">
+      <div class="form-group">
+        <label class="form-label" for="otpInput">6-digit OTP</label>
+        <input class="form-input" id="otpInput" type="text" inputmode="numeric" maxlength="6" placeholder="Enter OTP" required />
+      </div>
+      <div style="display:flex; gap:.6rem;">
+        <button type="submit" class="btn btn-primary" style="flex:1" id="otpVerifyBtn">Verify & Register Shop</button>
+        <button type="button" class="btn btn-outline" style="flex:1" id="otpResendBtn">Resend OTP</button>
+      </div>
+    </form>
+  </div>
+</div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="config.js"></script>
 <script src="script.js"></script>
 <script>
-  let map, marker;
+  let map, marker, locationSelected = false;
+  let registrationDraft = null;
+  let registrationVerificationId = null;
 
   function initMap(lat = 20.5937, lng = 78.9629) { // Default: India center
     if (map) map.remove();
@@ -79,19 +157,93 @@
     }).addTo(map);
 
     marker = L.marker([lat, lng], { draggable: true }).addTo(map);
-    marker.on('dragend', updateCoords);
+    marker.on('dragend', () => updateCoords(true));
     map.on('click', (e) => {
       marker.setLatLng(e.latlng);
-      updateCoords();
+      updateCoords(true);
     });
-    updateCoords();
   }
 
-  function updateCoords() {
+  function updateCoords(selected = true) {
     const pos = marker.getLatLng();
     document.getElementById('latitude').value = pos.lat;
     document.getElementById('longitude').value = pos.lng;
+    locationSelected = selected;
     document.getElementById('locationInfo').style.display = 'block';
+  }
+
+  const imageUploadBox = document.getElementById('imageUploadBox');
+  const shopImageInput = document.getElementById('shopImage');
+  const uploadPlaceholder = document.getElementById('uploadPlaceholder');
+  const imagePreview = document.getElementById('imagePreview');
+
+  imageUploadBox.addEventListener('click', () => shopImageInput.click());
+
+  imageUploadBox.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    imageUploadBox.style.borderColor = 'var(--teal-500)';
+    imageUploadBox.style.background = 'var(--teal-100)';
+  });
+
+  imageUploadBox.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    imageUploadBox.style.borderColor = 'var(--border-color)';
+    imageUploadBox.style.background = 'var(--bg-surface-hover)';
+  });
+
+  imageUploadBox.addEventListener('drop', (e) => {
+    e.preventDefault();
+    imageUploadBox.style.borderColor = 'var(--border-color)';
+    imageUploadBox.style.background = 'var(--bg-surface-hover)';
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      shopImageInput.files = e.dataTransfer.files;
+      handleImageSelection(e.dataTransfer.files[0]);
+    }
+  });
+
+  shopImageInput.addEventListener('change', function() {
+    if (this.files && this.files[0]) {
+      handleImageSelection(this.files[0]);
+    }
+  });
+
+  document.getElementById('phone').addEventListener('blur', (e) => {
+    const normalized = normalizePhoneInput(e.target.value);
+    if (normalized) e.target.value = normalized;
+  });
+
+  function openOtpModal(maskedDestination) {
+    document.getElementById('otpHelpText').innerText = `Enter the OTP sent to ${maskedDestination}.`;
+    document.getElementById('otpInput').value = '';
+    document.getElementById('otpModal').style.display = 'flex';
+    document.getElementById('otpInput').focus();
+  }
+
+  function closeOtpModal() {
+    document.getElementById('otpModal').style.display = 'none';
+  }
+
+  document.getElementById('otpCloseBtn').addEventListener('click', closeOtpModal);
+  document.getElementById('otpModal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('otpModal')) closeOtpModal();
+  });
+
+  function handleImageSelection(file) {
+    if (!file.type.match('image.*')) {
+      showToast('Please select an image file (JPG/PNG)', 'error');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('Image size should be less than 5MB', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      imagePreview.src = e.target.result;
+      imagePreview.style.display = 'block';
+      uploadPlaceholder.style.display = 'none';
+    }
+    reader.readAsDataURL(file);
   }
 
   document.getElementById('liveLocBtn').addEventListener('click', async () => {
@@ -99,13 +251,19 @@
       const pos = await getCurrentPosition();
       map.setView([pos.lat, pos.lng], 13);
       marker.setLatLng([pos.lat, pos.lng]);
-      updateCoords();
+      updateCoords(true);
     } catch (e) {
       showToast('Could not get live location', 'error');
     }
   });
 
   window.addEventListener('load', () => initMap());
+
+  document.querySelectorAll('.category-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+      this.classList.toggle('selected');
+    });
+  });
 
   document.getElementById('shopRegisterForm').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -115,13 +273,20 @@
     const password = document.getElementById('password').value;
     const lat = document.getElementById('latitude').value;
     const lng = document.getElementById('longitude').value;
+    const verificationChannel = document.querySelector('input[name="verificationChannel"]:checked').value;
+    const normalizedPhone = normalizePhoneInput(phone);
+    const normalizedEmail = normalizeEmailInput(email);
 
-    if (!lat || !lng) {
+    if (!locationSelected || !lat || !lng) {
       showToast('Please select shop location on map', 'error');
       return;
     }
-    if (!/^\d{10}$/.test(phone)) {
-      showToast('Phone must be 10 digits', 'error');
+    if (!normalizedPhone) {
+      showToast('Enter a valid phone number with or without country code', 'error');
+      return;
+    }
+    if (!normalizedEmail) {
+      showToast('Enter a valid email address', 'error');
       return;
     }
 
@@ -129,16 +294,85 @@
     btn.classList.add('btn-loading');
     btn.disabled = true;
 
+    let imageBase64 = null;
+    if (imagePreview.src && imagePreview.src.startsWith('data:image')) {
+      imageBase64 = imagePreview.src;
+    }
+
+    const selectedCategories = Array.from(document.querySelectorAll('.category-btn.selected')).map(btn => btn.dataset.category);
+
+    if (selectedCategories.length === 0) {
+      showToast('Please select at least one category', 'error');
+      btn.classList.remove('btn-loading');
+      btn.disabled = false;
+      return;
+    }
+
     try {
-      await register({
-        name, phone, email: email || null, password,
+      registrationDraft = {
+        name,
+        phone: normalizedPhone,
+        email: normalizedEmail,
+        password,
         role: 'shop',
         latitude: lat,
-        longitude: lng
+        longitude: lng,
+        image: imageBase64,
+        categories: selectedCategories
+      };
+      const response = await startRegistrationOtp({
+        phone: normalizedPhone,
+        email: normalizedEmail,
+        role: 'shop',
+        verificationChannel
       });
+      registrationVerificationId = response.verificationId;
+      openOtpModal(response.maskedDestination);
     } catch (err) {
-      document.getElementById('errorMsg').style.display = 'block';
-      document.getElementById('errorMsg').innerText = err.message;
+      const errMsg = document.getElementById('errorMsg');
+      errMsg.style.display = 'block';
+      errMsg.innerText = err.message;
+      errMsg.classList.remove('animate-shake');
+      void errMsg.offsetWidth;
+      errMsg.classList.add('animate-shake');
+    } finally {
+      btn.classList.remove('btn-loading');
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('otpForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!registrationDraft || !registrationVerificationId) return;
+    const btn = document.getElementById('otpVerifyBtn');
+    btn.classList.add('btn-loading');
+    btn.disabled = true;
+    try {
+      const response = await completeRegistrationOtp(
+        registrationDraft,
+        registrationVerificationId,
+        document.getElementById('otpInput').value.trim()
+      );
+      if (response.success) {
+        showToast('Shop registration successful! Please log in.', 'success');
+        window.location.href = 'login.html';
+      }
+    } catch (err) {
+    } finally {
+      btn.classList.remove('btn-loading');
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('otpResendBtn').addEventListener('click', async () => {
+    if (!registrationVerificationId) return;
+    const btn = document.getElementById('otpResendBtn');
+    btn.classList.add('btn-loading');
+    btn.disabled = true;
+    try {
+      const response = await resendRegistrationOtp(registrationVerificationId);
+      showToast(`New OTP sent to ${response.maskedDestination}`, 'success');
+    } catch (err) {
     } finally {
       btn.classList.remove('btn-loading');
       btn.disabled = false;

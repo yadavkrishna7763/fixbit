@@ -19,41 +19,60 @@
       <p>Create a free user account</p>
     </div>
 
-    <div style="height:4px; background:var(--slate-100); border-radius:99px; margin-bottom:1.5rem;">
-      <div id="progressBar" style="height:100%; width:25%; background:var(--teal-500); border-radius:99px; transition:.4s;"></div>
+    <style>
+      .floating-group { position: relative; margin-bottom: 1.25rem; }
+      .floating-input {
+        width: 100%; padding: 1.3rem 1rem 0.5rem 2.8rem; font-size: 0.95rem;
+        border: 1.5px solid var(--input-border); border-radius: var(--radius-md);
+        background: var(--input-bg); color: var(--input-text); outline: none; transition: all 0.2s;
+      }
+      .floating-input:focus { border-color: var(--teal-500); box-shadow: 0 0 0 3px rgba(20,184,166,0.1); }
+      .floating-label {
+        position: absolute; left: 2.8rem; top: 50%; transform: translateY(-50%);
+        color: var(--input-placeholder); font-size: 0.95rem; pointer-events: none; transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+      }
+      .floating-input:focus ~ .floating-label,
+      .floating-input:not(:placeholder-shown) ~ .floating-label {
+        top: 0.4rem; transform: translateY(0); font-size: 0.75rem; color: var(--teal-600); font-weight: 500;
+      }
+      .floating-icon { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); font-size: 1.1rem; opacity: 0.7; }
+      .success-tick { position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); color: var(--success); opacity: 0; transition: opacity 0.2s; font-size: 1.1rem; }
+      .floating-input:valid:not(:placeholder-shown) ~ .success-tick { opacity: 1; }
+    </style>
+
+    <div style="height:6px; background:var(--bg-surface-hover); border-radius:99px; margin-bottom:1.5rem; overflow:hidden;">
+      <div id="progressBar" style="height:100%; width:0%; background:linear-gradient(90deg, var(--teal-400), var(--orange-400)); border-radius:99px; transition:width 0.4s cubic-bezier(0.4,0,0.2,1);"></div>
     </div>
 
     <form id="registerForm">
-      <div class="form-group">
-        <label class="form-label">Full Name</label>
-        <div class="input-icon-wrap">
-          <span class="icon">👤</span>
-          <input class="form-input" id="name" type="text" placeholder="Your full name" required/>
-        </div>
+      <div class="floating-group">
+        <input class="floating-input" id="name" type="text" placeholder=" " required/>
+        <label class="floating-label">Full Name</label>
+        <span class="floating-icon">👤</span>
+        <span class="success-tick">✓</span>
       </div>
 
-      <div class="form-group">
-        <label class="form-label">Phone Number <span style="color:#dc2626">*</span></label>
-        <div class="input-icon-wrap">
-          <span class="icon">📱</span>
-          <input class="form-input" id="phone" type="tel" placeholder="10-digit number" pattern="[0-9]{10}" required/>
-        </div>
+      <div class="floating-group">
+        <input class="floating-input" id="phone" type="tel" placeholder=" " required/>
+        <label class="floating-label">Phone Number *</label>
+        <span class="floating-icon">📱</span>
+        <span class="success-tick">✓</span>
       </div>
 
-      <div class="form-group">
-        <label class="form-label">Email <span style="color:var(--slate-300);">(optional)</span></label>
-        <div class="input-icon-wrap">
-          <span class="icon">📧</span>
-          <input class="form-input" id="email" type="email" placeholder="your@email.com"/>
-        </div>
+      <div class="floating-group">
+        <input class="floating-input" id="email" type="email" placeholder=" " required/>
+        <label class="floating-label">Email *</label>
+        <span class="floating-icon">📧</span>
+        <span class="success-tick">✓</span>
       </div>
 
-      <div class="form-group">
-        <label class="form-label">Password <span style="color:#dc2626">*</span></label>
-        <div class="input-icon-wrap">
-          <span class="icon">🔒</span>
-          <input class="form-input" id="password" type="password" placeholder="Min 6 characters" minlength="6" required/>
-        </div>
+      <input type="hidden" name="verificationChannel" value="email">
+
+      <div class="floating-group">
+        <input class="floating-input" id="password" type="password" placeholder=" " minlength="6" required/>
+        <label class="floating-label">Password *</label>
+        <span class="floating-icon">🔒</span>
+        <span class="success-tick">✓</span>
       </div>
 
       <!-- Hidden location fields will be populated via JS -->
@@ -62,7 +81,7 @@
 
       <div id="errorMsg" class="error-message" style="display:none;"></div>
 
-      <button type="submit" class="btn btn-primary btn-full btn-lg" id="regBtn">
+      <button type="submit" class="btn btn-primary btn-full btn-lg" id="regBtn" style="margin-top:0.5rem; box-shadow:var(--shadow-teal);">
         Create Account →
       </button>
     </form>
@@ -73,15 +92,57 @@
 </div>
 
 <div class="toast-container" id="toastContainer"></div>
+<div id="otpModal" style="display:none; position:fixed; inset:0; background:rgba(15,23,42,0.55); z-index:2000; align-items:center; justify-content:center; padding:1rem;">
+  <div class="glass-panel" style="width:min(100%, 440px); padding:1.25rem; border-radius:20px; position:relative;">
+    <button type="button" id="otpCloseBtn" style="position:absolute; top:12px; right:12px; border:none; background:none; font-size:1.2rem; cursor:pointer; color:var(--slate-500);">✕</button>
+    <h3 class="font-outfit" style="font-size:1.25rem; margin-bottom:.35rem; color:var(--slate-800);">Verify Your Account</h3>
+    <p id="otpHelpText" style="font-size:.88rem; color:var(--slate-500); margin-bottom:1rem;">Enter the OTP we sent.</p>
+    <form id="otpForm">
+      <div class="form-group">
+        <label class="form-label" for="otpInput">6-digit OTP</label>
+        <input class="form-input" id="otpInput" type="text" inputmode="numeric" maxlength="6" placeholder="Enter OTP" required />
+      </div>
+      <div style="display:flex; gap:.6rem;">
+        <button type="submit" class="btn btn-primary" style="flex:1" id="otpVerifyBtn">Verify & Create Account</button>
+        <button type="button" class="btn btn-outline" style="flex:1" id="otpResendBtn">Resend OTP</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script src="config.js"></script>
 <script src="script.js"></script>
 <script>
+  let registrationDraft = null;
+  let registrationVerificationId = null;
+
   // Update progress bar
   function updateProgress() {
-    const fields = ['name', 'phone', 'password'];
+    const fields = ['name', 'phone', 'email', 'password'];
     const filled = fields.filter(id => document.getElementById(id).value.trim()).length;
-    document.getElementById('progressBar').style.width = (filled / 3 * 100) + '%';
+    document.getElementById('progressBar').style.width = (filled / 4 * 100) + '%';
   }
   document.querySelectorAll('input').forEach(i => i.addEventListener('input', updateProgress));
+
+  document.getElementById('phone').addEventListener('blur', (e) => {
+    const normalized = normalizePhoneInput(e.target.value);
+    if (normalized) e.target.value = normalized;
+  });
+
+  function openOtpModal(maskedDestination) {
+    document.getElementById('otpHelpText').innerText = `Enter the OTP sent to ${maskedDestination}.`;
+    document.getElementById('otpInput').value = '';
+    document.getElementById('otpModal').style.display = 'flex';
+    document.getElementById('otpInput').focus();
+  }
+
+  function closeOtpModal() {
+    document.getElementById('otpModal').style.display = 'none';
+  }
+
+  document.getElementById('otpCloseBtn').addEventListener('click', closeOtpModal);
+  document.getElementById('otpModal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('otpModal')) closeOtpModal();
+  });
 
   // Get location on page load
   window.addEventListener('load', async () => {
@@ -102,9 +163,16 @@
     const password = document.getElementById('password').value;
     const lat = document.getElementById('latitude').value;
     const lng = document.getElementById('longitude').value;
+    const verificationChannel = document.querySelector('input[name="verificationChannel"]:checked').value;
+    const normalizedPhone = normalizePhoneInput(phone);
+    const normalizedEmail = normalizeEmailInput(email);
 
-    if (!/^\d{10}$/.test(phone)) {
-      showToast('Phone must be 10 digits', 'error');
+    if (!normalizedPhone) {
+      showToast('Enter a valid phone number with or without country code', 'error');
+      return;
+    }
+    if (!normalizedEmail) {
+      showToast('Enter a valid email address', 'error');
       return;
     }
     if (password.length < 6) {
@@ -117,15 +185,65 @@
     btn.disabled = true;
 
     try {
-      await register({
-        name, phone, email: email || null, password,
+      registrationDraft = {
+        name,
+        phone: normalizedPhone,
+        email: normalizedEmail,
+        password,
         role: 'user',
         latitude: lat || null,
         longitude: lng || null
+      };
+
+      const response = await startRegistrationOtp({
+        phone: normalizedPhone,
+        email: normalizedEmail,
+        role: 'user',
+        verificationChannel
       });
+      registrationVerificationId = response.verificationId;
+      openOtpModal(response.maskedDestination);
     } catch (err) {
       document.getElementById('errorMsg').style.display = 'block';
       document.getElementById('errorMsg').innerText = err.message;
+    } finally {
+      btn.classList.remove('btn-loading');
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('otpForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!registrationDraft || !registrationVerificationId) return;
+    const btn = document.getElementById('otpVerifyBtn');
+    btn.classList.add('btn-loading');
+    btn.disabled = true;
+    try {
+      const response = await completeRegistrationOtp(
+        registrationDraft,
+        registrationVerificationId,
+        document.getElementById('otpInput').value.trim()
+      );
+      if (response.success) {
+        showToast('Registration successful! Please log in.', 'success');
+        window.location.href = 'login.html';
+      }
+    } catch (err) {
+    } finally {
+      btn.classList.remove('btn-loading');
+      btn.disabled = false;
+    }
+  });
+
+  document.getElementById('otpResendBtn').addEventListener('click', async () => {
+    if (!registrationVerificationId) return;
+    const btn = document.getElementById('otpResendBtn');
+    btn.classList.add('btn-loading');
+    btn.disabled = true;
+    try {
+      const response = await resendRegistrationOtp(registrationVerificationId);
+      showToast(`New OTP sent to ${response.maskedDestination}`, 'success');
+    } catch (err) {
     } finally {
       btn.classList.remove('btn-loading');
       btn.disabled = false;
