@@ -846,7 +846,7 @@
 
     try {
       const pos = await getCurrentPosition();
-      const data = await apiRequest(`/shops/nearby?lat=${pos.lat}&lng=${pos.lng}&radius=50000&limit=6`);
+      const data = await apiRequest(`/shops/search?lat=${pos.lat}&lng=${pos.lng}&limit=6`);
       renderShops(data.shops);
     } catch (err) {
       console.warn('Could not get location, falling back to general shops:', err);

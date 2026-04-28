@@ -28,7 +28,7 @@ async function searchShops(req, res) {
     q,
     limit: hasCoordinates ? 500 : limit,
     minRating,
-    requireLocation: hasCoordinates
+    requireLocation: false
   });
 
   if (hasCoordinates) {
