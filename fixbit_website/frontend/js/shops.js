@@ -66,7 +66,7 @@ function renderShops(shops, container) {
     if (shop.category.toLowerCase().includes('apple')) badgeClass = 'shop-tag-blue';
     if (shop.category.toLowerCase().includes('all')) badgeClass = 'shop-tag-purple';
 
-    let finalImage = shop.profile_image || shop.image || 'assets/default-shop.png';
+    let finalImage = shop.shop_image || shop.profile_image || shop.image || 'assets/default-shop.png';
     if (finalImage && !finalImage.startsWith('http') && !finalImage.startsWith('assets/')) {
         if (typeof assetUrl === 'function') {
             finalImage = assetUrl(finalImage);

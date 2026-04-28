@@ -811,27 +811,19 @@
     const container = document.getElementById('nearbyShopsContainer');
     if (!container) return;
 
-    try {
-      const pos = await getCurrentPosition();
-      const data = await apiRequest(`/shops/nearby?lat=${pos.lat}&lng=${pos.lng}&radius=10&limit=6`);
-      let shops = data.shops || [];
-
-      if (shops.length === 0) {
-        const fallback = await apiRequest(`/shops/search?lat=${pos.lat}&lng=${pos.lng}&sortBy=rating&limit=6`);
-        shops = fallback.shops || [];
-      }
-
-      if (shops.length === 0) {
+    function renderShops(shops) {
+      if (!shops || shops.length === 0) {
         container.innerHTML = '<div style="padding: 20px; color: var(--text-muted); margin: 0 auto;">No shops available right now.</div>';
         return;
       }
 
       container.innerHTML = shops.map(shop => {
-        const distanceStr = shop.distance !== undefined ? `${parseFloat(shop.distance).toFixed(1)} km` : '';
+        const distanceStr = (shop.distance !== undefined && shop.distance !== null) ? `${parseFloat(shop.distance).toFixed(1)} km` : '';
         const rating = shop.avg_rating ? parseFloat(shop.avg_rating).toFixed(1) : 'New';
         const shopName = shop.name || 'Shop';
         const jobsCount = Number(shop.completed_jobs || 0);
-        const shopImage = shop.profile_image ? assetUrl(shop.profile_image) : 'assets/default-shop.png';
+        const shopImagePath = shop.shop_image || shop.profile_image || shop.image;
+        const shopImage = shopImagePath ? assetUrl(shopImagePath) : 'assets/default-shop.png';
         
         return `
           <div class="shop-card" onclick="window.location.href='login.html'">
@@ -841,7 +833,7 @@
             </div>
             <div class="shop-body">
               <h3>${escapeHTML(shopName)}</h3>
-              <p class="shop-meta">📍 ${distanceStr} &nbsp;·&nbsp; ${jobsCount} completed jobs</p>
+              <p class="shop-meta">${distanceStr ? `📍 ${distanceStr} &nbsp;·&nbsp; ` : ''}${jobsCount} completed jobs</p>
               <div class="shop-footer">
                 <span class="shop-tag" style="background:rgba(13,148,136,.12);color:var(--teal-600);">${shop.is_verified ? 'Verified Shop' : 'Repair Partner'}</span>
                 <span class="shop-price" style="color:var(--teal-600);font-size:.85rem;font-weight:700;">View Details →</span>
@@ -850,44 +842,19 @@
           </div>
         `;
       }).join('');
-      
+    }
+
+    try {
+      const pos = await getCurrentPosition();
+      const data = await apiRequest(`/shops/nearby?lat=${pos.lat}&lng=${pos.lng}&radius=50000&limit=6`);
+      renderShops(data.shops);
     } catch (err) {
-      console.error('Error fetching nearby shops:', err);
+      console.warn('Could not get location, falling back to general shops:', err);
       try {
-        const fallback = await apiRequest('/shops/search?sortBy=rating&limit=6');
-        const shops = fallback.shops || [];
-
-        if (!shops.length) {
-          container.innerHTML = '<div style="padding: 20px; color: var(--text-muted); margin: 0 auto;">No shops available right now.</div>';
-          return;
-        }
-
-        container.innerHTML = shops.map(shop => {
-          const rating = shop.avg_rating ? parseFloat(shop.avg_rating).toFixed(1) : 'New';
-          const shopName = shop.name || 'Shop';
-          const jobsCount = Number(shop.completed_jobs || 0);
-          const shopImage = shop.profile_image ? assetUrl(shop.profile_image) : 'assets/default-shop.png';
-
-          return `
-            <div class="shop-card" onclick="window.location.href='login.html'">
-              <div class="shop-img">
-                <img src="${shopImage}" alt="${escapeHTML(shopName)}" onerror="this.src='assets/default-shop.png'"/>
-                <div class="shop-rating">⭐ ${rating}</div>
-              </div>
-              <div class="shop-body">
-                <h3>${escapeHTML(shopName)}</h3>
-                <p class="shop-meta">${jobsCount} completed jobs</p>
-                <div class="shop-footer">
-                  <span class="shop-tag" style="background:rgba(13,148,136,.12);color:var(--teal-600);">${shop.is_verified ? 'Verified Shop' : 'Repair Partner'}</span>
-                  <span class="shop-price" style="color:var(--teal-600);font-size:.85rem;font-weight:700;">View Details →</span>
-                </div>
-              </div>
-            </div>
-          `;
-        }).join('');
+        const data = await apiRequest(`/shops/search?limit=6`);
+        renderShops(data.shops);
       } catch (fallbackErr) {
-        console.error('Error fetching fallback shops:', fallbackErr);
-        container.innerHTML = '<div style="padding: 20px; color: var(--text-muted); margin: 0 auto;">Enable location to see nearby shops.</div>';
+        container.innerHTML = '<div style="padding: 20px; color: var(--text-muted); margin: 0 auto;">No shops available right now.</div>';
       }
     }
   }

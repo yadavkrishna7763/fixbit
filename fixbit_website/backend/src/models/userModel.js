@@ -130,26 +130,49 @@ async function setBanned(userId, banned) {
 async function searchShops({ q, limit, minRating = null, requireLocation = false }) {
   const params = [];
   let sql = `
-    SELECT id, name, phone, latitude, longitude, avg_rating, profile_image, address, working_hours, description, is_verified, completed_jobs, last_active_at
-    FROM users
-    WHERE role = 'shop' AND banned = 0
+    SELECT
+      u.id,
+      u.name,
+      u.phone,
+      u.latitude,
+      u.longitude,
+      u.avg_rating,
+      COALESCE(shop_image.image_url, u.profile_image) AS profile_image,
+      shop_image.image_url AS shop_image,
+      u.address,
+      u.working_hours,
+      u.description,
+      u.is_verified,
+      u.completed_jobs,
+      u.last_active_at
+    FROM users u
+    LEFT JOIN (
+      SELECT si.shop_id, si.image_url
+      FROM shop_images si
+      INNER JOIN (
+        SELECT shop_id, COALESCE(MAX(CASE WHEN is_primary = 1 THEN id END), MAX(id)) AS selected_id
+        FROM shop_images
+        GROUP BY shop_id
+      ) picked ON picked.selected_id = si.id
+    ) shop_image ON shop_image.shop_id = u.id
+    WHERE u.role = 'shop' AND u.banned = 0
   `;
 
   if (q) {
-    sql += ' AND name LIKE ?';
+    sql += ' AND u.name LIKE ?';
     params.push(`%${q}%`);
   }
 
   if (minRating !== null) {
-    sql += ' AND COALESCE(avg_rating, 0) >= ?';
+    sql += ' AND COALESCE(u.avg_rating, 0) >= ?';
     params.push(minRating);
   }
 
   if (requireLocation) {
-    sql += ' AND latitude IS NOT NULL AND longitude IS NOT NULL';
+    sql += ' AND u.latitude IS NOT NULL AND u.longitude IS NOT NULL';
   }
 
-  sql += ' ORDER BY COALESCE(avg_rating, 0) DESC, name ASC LIMIT ?';
+  sql += ' ORDER BY COALESCE(u.avg_rating, 0) DESC, u.name ASC LIMIT ?';
   params.push(limit);
 
   const [rows] = await db.query(sql, params);
