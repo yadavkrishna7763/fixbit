@@ -155,7 +155,7 @@ async function searchShops({ q, limit, minRating = null, requireLocation = false
         GROUP BY shop_id
       ) picked ON picked.selected_id = si.id
     ) shop_image ON shop_image.shop_id = u.id
-    WHERE u.role = 'shop' AND u.banned = 0
+    WHERE u.role = 'shop' AND (u.banned = 0 OR u.banned IS NULL)
   `;
 
   if (q) {
