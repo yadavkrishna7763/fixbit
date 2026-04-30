@@ -38,6 +38,31 @@ app.use('/uploads', express.static(uploadRoot, {
   maxAge: process.env.NODE_ENV === 'production' ? '1d' : 0
 }));
 
+const path = require('path');
+
+// Serve frontend in development
+if (process.env.NODE_ENV !== 'production') {
+  app.use(express.static(path.join(__dirname, '../../frontend'), {
+    maxAge: 0,
+    setHeaders: (res, path) => {
+      if (path.endsWith('.html')) {
+        res.setHeader('Cache-Control', 'no-cache');
+      }
+    }
+  }));
+
+  // Catch-all handler for SPA routing in development
+  app.get('*', (req, res, next) => {
+    // Skip API routes
+    if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/')) {
+      return next();
+    }
+
+    // Serve index.html for all non-API routes
+    res.sendFile(path.join(__dirname, '../../frontend/index.html'));
+  });
+}
+
 app.get('/', (req, res) => {
   res.json({
     success: true,

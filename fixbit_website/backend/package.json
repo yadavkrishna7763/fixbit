@@ -3,9 +3,26 @@
   "version": "2.0.0",
   "description": "FixBit mobile repair marketplace backend",
   "main": "src/server.js",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js"
+    "start": "NODE_ENV=production node src/server.js",
+    "dev": "NODE_ENV=development nodemon src/server.js",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "setup": "npm install && node scripts/setup.js",
+    "db:init": "mysql -u root -p < schema.sql",
+    "db:migrate": "node scripts/migrate.js",
+    "build": "echo 'No build step required'",
+    "lint": "echo 'No linter configured'",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop ecosystem.config.js",
+    "pm2:restart": "pm2 restart ecosystem.config.js",
+    "pm2:delete": "pm2 delete ecosystem.config.js",
+    "docker:build": "docker build -t fixbit-backend .",
+    "docker:run": "docker run -p 5050:5050 --env-file .env fixbit-backend",
+    "deploy:check": "node scripts/health-check.js"
   },
   "dependencies": {
     "bcrypt": "^6.0.0",
@@ -21,5 +38,15 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.2"
-  }
+  },
+  "keywords": [
+    "fixbit",
+    "mobile-repair",
+    "marketplace",
+    "nodejs",
+    "express",
+    "mysql"
+  ],
+  "author": "FixBit Team",
+  "license": "MIT"
 }
